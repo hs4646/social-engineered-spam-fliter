@@ -29,15 +29,16 @@ class ConnectionManager:
                 self.active_connections.remove(websocket)
 
     async def broadcast(self, payload: dict[str, Any]) -> None:
-        stale_connections: list[WebSocket] = []
         async with self._lock:
-            for connection in self.active_connections:
+            # Iterate over a copy to safely remove from the original list
+            for connection in self.active_connections[:]:
                 try:
                     await connection.send_json(payload)
                 except Exception:
-                    stale_connections.append(connection)
-            for connection in stale_connections:
-                self.active_connections.remove(connection)
+                    try:
+                        self.active_connections.remove(connection)
+                    except ValueError:
+                        pass
 
 
 class MonitorState:
@@ -73,6 +74,11 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         app.state.loop = asyncio.get_running_loop()
         yield
+        # Ensure monitoring stops on app shutdown
+        monitor_state.set_running(False)
+        if monitor_state.thread and monitor_state.thread.is_alive():
+            # Give the thread a moment to clean up
+            monitor_state.thread.join(timeout=2.0)
 
     app = FastAPI(title="UTeM SOC Dashboard", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory=str(settings.static_dir)), name="static")
