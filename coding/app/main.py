@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.core.config import get_settings
-from radar import whatsapp_monitor_worker
+from app.services.radar import whatsapp_monitor_worker
 
 
 class ConnectionManager:

@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
 
-DATASET_PATH = Path(__file__).with_name("whatsapp_dataset.csv")
+DATASET_PATH = Path(__file__).resolve().parents[3] / "data" / "whatsapp_dataset.csv"
 REQUIRED_COLUMNS = {"content", "label"}
 
 
