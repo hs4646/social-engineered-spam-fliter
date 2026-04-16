@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f3f6fb 0%, #dce7f7 100%);
+            min-height: 100vh;
+        }
+        .hero-card {
+            border: 0;
+            border-radius: 1.25rem;
+            box-shadow: 0 1.25rem 2.5rem rgba(22, 34, 57, 0.12);
+        }
+        .feed-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 0.75rem 1.5rem rgba(22, 34, 57, 0.1);
+        }
+        .feed-list {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .risk-badge {
+            min-width: 7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="card hero-card mb-4">
+            <div class="card-body p-4 p-lg-5">
+                <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+                    <div>
+                        <h1 class="display-6 fw-bold mb-2">Automated WhatsApp Threat Intelligence System</h1>
+                        <p class="text-secondary mb-1">Researcher: {{ researcher }}</p>
+                        <p class="text-secondary mb-0">Supervisor: {{ supervisor }}</p>
+                    </div>
+                    <div class="text-lg-end">
+                        <span id="statusBadge" class="badge text-bg-secondary fs-6 px-3 py-2">Inactive</span>
+                    </div>
+                </div>
+                <div class="mt-4 d-flex flex-wrap gap-2">
+                    <button id="startBtn" class="btn btn-success btn-lg">Activate monitoring</button>
+                    <button id="stopBtn" class="btn btn-outline-danger btn-lg">Stop monitoring</button>
+                    <button id="refreshBtn" class="btn btn-outline-primary btn-lg">Refresh feed</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card feed-card">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">Live Threat Feed</h2>
+                        <p class="text-secondary mb-0">Real-time intercepted messages and automated defense events.</p>
+                    </div>
+                </div>
+                <div id="feedList" class="feed-list d-grid gap-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/static/dashboard.js"></script>
+</body>
+</html>
