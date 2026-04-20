@@ -109,7 +109,7 @@ def create_app() -> FastAPI:
             {
                 "title": "UTeM SOC Dashboard",
                 "researcher": "WONG HAN SHEN (BAXZ)",
-                "supervisor": "Ts. Dr. Megat",
+                "supervisor": "Dr. Megat",
             },
         )
 

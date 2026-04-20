@@ -16,7 +16,7 @@ from .learning_engine import setup_security_models
 
 MessageCallback = Callable[[dict], None]
 StatusCallback = Callable[[bool], None]
-SESSION_DIR = Path(__file__).resolve().parents[3] / ".whatsapp_session"
+SESSION_DIR = Path(__file__).resolve().parents[2] / ".whatsapp_session"
 
 
 def _get_recent_message_texts(driver: webdriver.Chrome) -> list[str]:
