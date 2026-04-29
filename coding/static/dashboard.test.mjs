@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 
-import { computeControlState, shouldRunAction } from './dashboard.js';
+import {
+  classifyRiskLevel,
+  computeControlState,
+  shouldRunAction,
+} from './dashboard.js';
 
 assert.deepEqual(
   computeControlState({ isRunning: true, requestPending: false }),
@@ -8,8 +12,8 @@ assert.deepEqual(
     startDisabled: true,
     stopDisabled: false,
     refreshDisabled: false,
-    statusText: 'Monitoring Active',
-    statusClassName: 'badge text-bg-success fs-6 px-3 py-2',
+    statusText: 'Threat Monitoring Live',
+    statusClassName: 'status-pill status-live',
   },
 );
 
@@ -19,10 +23,15 @@ assert.deepEqual(
     startDisabled: true,
     stopDisabled: true,
     refreshDisabled: false,
-    statusText: 'Inactive',
-    statusClassName: 'badge text-bg-secondary fs-6 px-3 py-2',
+    statusText: 'Standby',
+    statusClassName: 'status-pill status-idle',
   },
 );
+
+assert.equal(classifyRiskLevel({ type: 'chat', risk: 0.82 }), 'critical');
+assert.equal(classifyRiskLevel({ type: 'chat', risk: 0.52 }), 'warning');
+assert.equal(classifyRiskLevel({ type: 'chat', risk: 0.15 }), 'safe');
+assert.equal(classifyRiskLevel({ type: 'system', risk: 0.1 }), 'system');
 
 assert.equal(
   shouldRunAction('start', { isRunning: true, requestPending: false }),

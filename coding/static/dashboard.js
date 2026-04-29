@@ -3,10 +3,8 @@ export function computeControlState({ isRunning, requestPending }) {
     startDisabled: requestPending || isRunning,
     stopDisabled: requestPending || !isRunning,
     refreshDisabled: false,
-    statusText: isRunning ? 'Monitoring Active' : 'Inactive',
-    statusClassName: isRunning
-      ? 'badge text-bg-success fs-6 px-3 py-2'
-      : 'badge text-bg-secondary fs-6 px-3 py-2',
+    statusText: isRunning ? 'Threat Monitoring Live' : 'Standby',
+    statusClassName: isRunning ? 'status-pill status-live' : 'status-pill status-idle',
   };
 }
 
@@ -26,6 +24,21 @@ export function shouldRunAction(action, { isRunning, requestPending }) {
   return true;
 }
 
+export function classifyRiskLevel(message) {
+  if (message.type === 'system') {
+    return 'system';
+  }
+
+  const risk = Number(message.risk || 0);
+  if (risk > 0.7) {
+    return 'critical';
+  }
+  if (risk > 0.4) {
+    return 'warning';
+  }
+  return 'safe';
+}
+
 function escapeHtml(value) {
   return value
     .replaceAll('&', '&amp;')
@@ -37,16 +50,18 @@ function escapeHtml(value) {
 
 function riskMeta(message) {
   const risk = Number(message.risk || 0);
-  if (message.type === 'system') {
-    return { label: 'SYSTEM', css: 'text-bg-info' };
+  const level = classifyRiskLevel(message);
+
+  if (level === 'system') {
+    return { label: 'SYSTEM EVENT', level, score: 'N/A' };
   }
-  if (risk > 0.7) {
-    return { label: `CRITICAL ${Math.round(risk * 100)}%`, css: 'text-bg-danger' };
+  if (level === 'critical') {
+    return { label: 'CRITICAL', level, score: `${Math.round(risk * 100)}%` };
   }
-  if (risk > 0.4) {
-    return { label: `SUSPICIOUS ${Math.round(risk * 100)}%`, css: 'text-bg-warning' };
+  if (level === 'warning') {
+    return { label: 'SUSPICIOUS', level, score: `${Math.round(risk * 100)}%` };
   }
-  return { label: `SAFE ${Math.round(risk * 100)}%`, css: 'text-bg-success' };
+  return { label: 'LOW RISK', level, score: `${Math.round(risk * 100)}%` };
 }
 
 function initDashboard() {
@@ -55,6 +70,9 @@ function initDashboard() {
   const startBtn = document.getElementById('startBtn');
   const stopBtn = document.getElementById('stopBtn');
   const refreshBtn = document.getElementById('refreshBtn');
+  const eventCount = document.getElementById('eventCount');
+  const criticalCount = document.getElementById('criticalCount');
+  const safeCount = document.getElementById('safeCount');
 
   if (!feedList || !statusBadge || !startBtn || !stopBtn || !refreshBtn) {
     return;
@@ -63,6 +81,7 @@ function initDashboard() {
   const state = {
     isRunning: false,
     requestPending: false,
+    messages: [],
   };
 
   function syncControls() {
@@ -74,22 +93,44 @@ function initDashboard() {
     refreshBtn.disabled = controlState.refreshDisabled;
   }
 
+  function updateStats() {
+    if (eventCount) {
+      eventCount.textContent = String(state.messages.length);
+    }
+    if (criticalCount) {
+      criticalCount.textContent = String(
+        state.messages.filter((message) => classifyRiskLevel(message) === 'critical').length,
+      );
+    }
+    if (safeCount) {
+      safeCount.textContent = String(
+        state.messages.filter((message) => classifyRiskLevel(message) === 'safe').length,
+      );
+    }
+  }
+
   function renderMessage(message, prepend = true) {
     const meta = riskMeta(message);
-    const wrapper = document.createElement('div');
-    wrapper.className = 'border rounded-4 bg-white p-3';
+    const wrapper = document.createElement('article');
+    wrapper.className = `feed-entry risk-${meta.level}`;
     wrapper.innerHTML = `
-      <div class="d-flex justify-content-between align-items-start gap-3">
+      <div class="entry-header">
         <div>
-          <div class="fw-semibold mb-2">${escapeHtml(message.type === 'system' ? 'System event' : 'Intercepted message')}</div>
-          <div class="text-secondary">${escapeHtml(message.text || '')}</div>
+          <p class="entry-kicker">${escapeHtml(message.type === 'system' ? 'System signal' : 'Intercepted message')}</p>
+          <h3 class="entry-title">${escapeHtml(meta.label)}</h3>
         </div>
-        <span class="badge ${meta.css} risk-badge">${meta.label}</span>
+        <div class="entry-score">${escapeHtml(meta.score)}</div>
       </div>
+      <p class="entry-text">${escapeHtml(message.text || '')}</p>
     `;
 
     if (prepend) {
       feedList.prepend(wrapper);
+      state.messages.unshift(message);
+      state.messages = state.messages.slice(0, 50);
+      if (feedList.children.length > 50) {
+        feedList.removeChild(feedList.lastElementChild);
+      }
     } else {
       feedList.appendChild(wrapper);
     }
@@ -97,9 +138,11 @@ function initDashboard() {
 
   function renderSnapshot(snapshot) {
     state.isRunning = Boolean(snapshot.is_running);
+    state.messages = [...snapshot.messages].reverse();
     syncControls();
     feedList.innerHTML = '';
-    [...snapshot.messages].reverse().forEach((message) => renderMessage(message, false));
+    state.messages.forEach((message) => renderMessage(message, false));
+    updateStats();
   }
 
   async function postJson(url) {
@@ -154,6 +197,7 @@ function initDashboard() {
       renderSnapshot(payload.data);
     } else if (payload.event === 'message') {
       renderMessage(payload.data);
+      updateStats();
     } else if (payload.event === 'status') {
       state.isRunning = Boolean(payload.data.is_running);
       syncControls();
@@ -167,6 +211,7 @@ function initDashboard() {
   };
 
   syncControls();
+  updateStats();
 }
 
 if (typeof document !== 'undefined') {

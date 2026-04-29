@@ -4,65 +4,450 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        :root {
+            --bg: #07111d;
+            --panel: rgba(8, 22, 38, 0.84);
+            --panel-strong: rgba(8, 22, 38, 0.94);
+            --line: rgba(112, 255, 208, 0.18);
+            --text: #d7f8ef;
+            --muted: #8fb8b2;
+            --accent: #59f3c1;
+            --accent-strong: #12d6b0;
+            --danger: #ff5f7a;
+            --warning: #f3c96b;
+            --safe: #6ef7a4;
+            --system: #6cc8ff;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            background: linear-gradient(135deg, #f3f6fb 0%, #dce7f7 100%);
+            margin: 0;
             min-height: 100vh;
+            font-family: Consolas, "Lucida Console", Monaco, monospace;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top, rgba(18, 214, 176, 0.15), transparent 35%),
+                radial-gradient(circle at bottom right, rgba(108, 200, 255, 0.12), transparent 25%),
+                linear-gradient(180deg, #040b14 0%, #07111d 48%, #02070d 100%);
+            overflow-x: hidden;
         }
-        .hero-card {
-            border: 0;
-            border-radius: 1.25rem;
-            box-shadow: 0 1.25rem 2.5rem rgba(22, 34, 57, 0.12);
+
+        .grid-overlay {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(89, 243, 193, 0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(89, 243, 193, 0.06) 1px, transparent 1px);
+            background-size: 36px 36px;
+            mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent);
+            pointer-events: none;
         }
-        .feed-card {
-            border: 0;
-            border-radius: 1rem;
-            box-shadow: 0 0.75rem 1.5rem rgba(22, 34, 57, 0.1);
+
+        .dashboard-frame {
+            position: relative;
+            z-index: 1;
+            width: min(1200px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 32px 0 40px;
         }
+
+        .hero-panel,
+        .intel-strip,
+        .feed-panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(16px);
+        }
+
+        .hero-panel {
+            padding: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-panel::after {
+            content: "";
+            position: absolute;
+            inset: auto -40px -60px auto;
+            width: 220px;
+            height: 220px;
+            background: radial-gradient(circle, rgba(89, 243, 193, 0.2), transparent 70%);
+            filter: blur(10px);
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(89, 243, 193, 0.28);
+            color: var(--accent);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+
+        h1 {
+            margin: 14px 0 10px;
+            font-size: clamp(2rem, 5vw, 3.6rem);
+            line-height: 1;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .hero-copy {
+            max-width: 720px;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        .identity-list,
+        .hero-actions,
+        .intel-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .identity-list {
+            margin-top: 18px;
+        }
+
+        .identity-chip,
+        .intel-card {
+            background: rgba(4, 13, 22, 0.72);
+            border: 1px solid rgba(89, 243, 193, 0.16);
+            border-radius: 16px;
+        }
+
+        .identity-chip {
+            padding: 10px 14px;
+            color: var(--muted);
+        }
+
+        .hero-actions {
+            margin-top: 28px;
+        }
+
+        .hero-actions button {
+            border: 1px solid rgba(89, 243, 193, 0.24);
+            border-radius: 14px;
+            padding: 14px 18px;
+            color: var(--text);
+            background: rgba(9, 24, 40, 0.78);
+            font: inherit;
+            cursor: pointer;
+            transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+        }
+
+        .hero-actions button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(89, 243, 193, 0.45);
+        }
+
+        .hero-actions button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, rgba(18, 214, 176, 0.28), rgba(108, 200, 255, 0.2));
+        }
+
+        .btn-danger {
+            border-color: rgba(255, 95, 122, 0.28);
+            background: rgba(44, 9, 17, 0.65);
+        }
+
+        .status-panel {
+            background: var(--panel-strong);
+            border: 1px solid rgba(89, 243, 193, 0.18);
+            border-radius: 20px;
+            padding: 20px;
+        }
+
+        .status-panel h2,
+        .feed-header h2 {
+            margin: 0 0 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.95rem;
+            color: var(--muted);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .status-live {
+            color: #03150f;
+            background: var(--accent);
+            box-shadow: 0 0 24px rgba(89, 243, 193, 0.35);
+        }
+
+        .status-idle {
+            color: var(--muted);
+            background: rgba(26, 51, 58, 0.7);
+        }
+
+        .status-copy {
+            margin: 16px 0 0;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        .intel-strip {
+            margin-top: 18px;
+            padding: 18px;
+        }
+
+        .intel-grid {
+            justify-content: space-between;
+        }
+
+        .intel-card {
+            flex: 1 1 180px;
+            min-width: 0;
+            padding: 18px;
+        }
+
+        .intel-label {
+            margin: 0;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.8rem;
+        }
+
+        .intel-value {
+            margin: 8px 0 0;
+            font-size: clamp(1.6rem, 4vw, 2.4rem);
+            font-weight: 700;
+        }
+
+        .feed-panel {
+            margin-top: 18px;
+            padding: 24px;
+        }
+
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: end;
+            margin-bottom: 18px;
+        }
+
+        .feed-header p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
         .feed-list {
-            max-height: 70vh;
+            display: grid;
+            gap: 14px;
+            max-height: 68vh;
             overflow-y: auto;
+            padding-right: 4px;
         }
-        .risk-badge {
-            min-width: 7rem;
+
+        .feed-entry {
+            border-radius: 18px;
+            padding: 18px;
+            border: 1px solid rgba(89, 243, 193, 0.18);
+            background: rgba(5, 16, 28, 0.82);
+        }
+
+        .feed-entry.risk-critical {
+            border-color: rgba(255, 95, 122, 0.42);
+            box-shadow: inset 0 0 0 1px rgba(255, 95, 122, 0.12);
+        }
+
+        .feed-entry.risk-warning {
+            border-color: rgba(243, 201, 107, 0.34);
+        }
+
+        .feed-entry.risk-safe {
+            border-color: rgba(110, 247, 164, 0.22);
+        }
+
+        .feed-entry.risk-system {
+            border-color: rgba(108, 200, 255, 0.28);
+        }
+
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: start;
+        }
+
+        .entry-kicker,
+        .entry-text {
+            margin: 0;
+        }
+
+        .entry-kicker {
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.75rem;
+        }
+
+        .entry-title {
+            margin: 6px 0 0;
+            font-size: 1rem;
+        }
+
+        .entry-score {
+            min-width: 74px;
+            text-align: right;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .risk-critical .entry-score {
+            color: var(--danger);
+        }
+
+        .risk-warning .entry-score {
+            color: var(--warning);
+        }
+
+        .risk-safe .entry-score {
+            color: var(--safe);
+        }
+
+        .risk-system .entry-score {
+            color: var(--system);
+        }
+
+        .entry-text {
+            margin-top: 14px;
+            color: var(--text);
+            line-height: 1.7;
+            word-break: break-word;
+        }
+
+        @media (max-width: 900px) {
+            .hero-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .feed-header {
+                flex-direction: column;
+                align-items: start;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .dashboard-frame {
+                width: min(100% - 20px, 1200px);
+                padding-top: 18px;
+            }
+
+            .hero-panel,
+            .feed-panel,
+            .intel-strip {
+                border-radius: 20px;
+            }
+
+            .hero-panel,
+            .feed-panel {
+                padding: 18px;
+            }
+
+            h1 {
+                font-size: 1.9rem;
+            }
+
+            .hero-actions button {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container py-5">
-        <div class="card hero-card mb-4">
-            <div class="card-body p-4 p-lg-5">
-                <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
-                    <div>
-                        <h1 class="display-6 fw-bold mb-2">Automated WhatsApp Threat Intelligence System</h1>
-                        <p class="text-secondary mb-1">Researcher: {{ researcher }}</p>
-                        <p class="text-secondary mb-0">Supervisor: {{ supervisor }}</p>
+    <div class="grid-overlay"></div>
+    <main class="dashboard-frame">
+        <section class="hero-panel">
+            <div class="hero-grid">
+                <div>
+                    <span class="eyebrow">Cyber Defence Console</span>
+                    <h1>WhatsApp Threat Radar</h1>
+                    <p class="hero-copy">
+                        Real-time phishing surveillance for multilingual and Manglish-heavy chat streams, tuned to expose shortlink abuse,
+                        account takeover lures, and social engineering signals before they spread.
+                    </p>
+                    <div class="identity-list">
+                        <div class="identity-chip">Researcher: {{ researcher }}</div>
+                        <div class="identity-chip">Supervisor: {{ supervisor }}</div>
                     </div>
-                    <div class="text-lg-end">
-                        <span id="statusBadge" class="badge text-bg-secondary fs-6 px-3 py-2">Inactive</span>
+                    <div class="hero-actions">
+                        <button id="startBtn" class="btn-primary">Activate Sensor Grid</button>
+                        <button id="stopBtn" class="btn-danger">Contain Session</button>
+                        <button id="refreshBtn">Sync Threat Feed</button>
                     </div>
                 </div>
-                <div class="mt-4 d-flex flex-wrap gap-2">
-                    <button id="startBtn" class="btn btn-success btn-lg">Activate monitoring</button>
-                    <button id="stopBtn" class="btn btn-outline-danger btn-lg">Stop monitoring</button>
-                    <button id="refreshBtn" class="btn btn-outline-primary btn-lg">Refresh feed</button>
-                </div>
+                <aside class="status-panel">
+                    <h2>Operations Status</h2>
+                    <span id="statusBadge" class="status-pill status-idle">Standby</span>
+                    <p class="status-copy">
+                        The dashboard keeps a live watch on suspicious messages, system events, and automated warnings sent back into the monitored chat.
+                    </p>
+                </aside>
             </div>
-        </div>
+        </section>
 
-        <div class="card feed-card">
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div>
-                        <h2 class="h4 mb-1">Live Threat Feed</h2>
-                        <p class="text-secondary mb-0">Real-time intercepted messages and automated defense events.</p>
-                    </div>
-                </div>
-                <div id="feedList" class="feed-list d-grid gap-3"></div>
+        <section class="intel-strip">
+            <div class="intel-grid">
+                <article class="intel-card">
+                    <p class="intel-label">Feed Events</p>
+                    <p id="eventCount" class="intel-value">0</p>
+                </article>
+                <article class="intel-card">
+                    <p class="intel-label">Critical Alerts</p>
+                    <p id="criticalCount" class="intel-value">0</p>
+                </article>
+                <article class="intel-card">
+                    <p class="intel-label">Low-Risk Messages</p>
+                    <p id="safeCount" class="intel-value">0</p>
+                </article>
             </div>
-        </div>
-    </div>
+        </section>
+
+        <section class="feed-panel">
+            <div class="feed-header">
+                <div>
+                    <h2>Live Threat Feed</h2>
+                    <p>Incoming interceptions, model decisions, and automated defense events appear here as they happen.</p>
+                </div>
+            </div>
+            <div id="feedList" class="feed-list"></div>
+        </section>
+    </main>
 
     <script type="module" src="/static/dashboard.js"></script>
 </body>

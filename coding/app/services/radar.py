@@ -11,7 +11,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 
-from .learning_engine import setup_security_models
+from .learning_engine import score_text, setup_security_models
 
 
 MessageCallback = Callable[[dict], None]
@@ -29,7 +29,7 @@ def _get_recent_message_texts(driver: webdriver.Chrome) -> list[str]:
         except StaleElementReferenceException:
             continue
 
-        if len(text) > 4:
+        if text and (len(text) > 4 or "." in text or "/" in text):
             texts.append(text)
 
     return texts[-3:]
@@ -87,9 +87,6 @@ def whatsapp_monitor_worker(
             time.sleep(1)
 
         model_bundle = setup_security_models()
-        vectorizer = model_bundle["vectorizer"]
-        rf_model = model_bundle["rf_model"]
-        svm_model = model_bundle["svm_model"]
         metrics = model_bundle["metrics"]
 
         on_message(
@@ -119,10 +116,7 @@ def whatsapp_monitor_worker(
 
                     seen_messages.append(latest_message)
 
-                    input_vector = vectorizer.transform([latest_message])
-                    rf_score = rf_model.predict_proba(input_vector)[0][1]
-                    svm_score = svm_model.predict_proba(input_vector)[0][1]
-                    average_score = (rf_score + svm_score) / 2
+                    average_score = float(score_text(latest_message, model_bundle)["risk_score"])
 
                     on_message(
                         {

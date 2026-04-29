@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from learning_engine import setup_security_models
+from app.services.learning_engine import score_text, setup_security_models
 
 
 class ModelRegistry:
@@ -17,12 +17,4 @@ class ModelRegistry:
             bundle = setup_security_models(dataset_path=self._dataset_path)
             self._bundle = bundle
 
-        vector = bundle["vectorizer"].transform([text])
-        rf_score = float(bundle["rf_model"].predict_proba(vector)[0][1])
-        svm_score = float(bundle["svm_model"].predict_proba(vector)[0][1])
-        return {
-            "risk_score": (rf_score + svm_score) / 2,
-            "rf_score": rf_score,
-            "svm_score": svm_score,
-            "model_version": bundle["metrics"]["model_version"],
-        }
+        return score_text(text, bundle)
