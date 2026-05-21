@@ -351,6 +351,80 @@
             word-break: break-word;
         }
 
+        .entry-actions {
+            margin-top: 14px;
+        }
+
+        .analyze-btn {
+            border: 1px solid rgba(89, 243, 193, 0.24);
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: var(--text);
+            background: rgba(9, 24, 40, 0.78);
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .review-panel {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(89, 243, 193, 0.12);
+        }
+
+        .review-label,
+        .review-note {
+            display: block;
+            color: var(--muted);
+            font-size: 0.8rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .review-note {
+            margin-top: 14px;
+        }
+
+        .reviewer-input {
+            width: 100%;
+            margin-top: 8px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(89, 243, 193, 0.18);
+            background: rgba(4, 13, 22, 0.72);
+            color: var(--text);
+            font: inherit;
+        }
+
+        .reviewer-input:disabled {
+            opacity: 0.45;
+        }
+
+        .review-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .review-btn {
+            border: 1px solid rgba(89, 243, 193, 0.24);
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: var(--text);
+            background: rgba(9, 24, 40, 0.78);
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .review-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
         @media (max-width: 900px) {
             .hero-grid {
                 grid-template-columns: 1fr;

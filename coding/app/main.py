@@ -2,6 +2,7 @@ import asyncio
 import threading
 from collections import deque
 from contextlib import asynccontextmanager
+from functools import lru_cache
 from typing import Any
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
@@ -10,6 +11,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.core.config import get_settings
+from app.repositories.risk_events import RiskEventRepository
+from app.schemas.monitor import ManualAnalyzeRequest, ManualReviewRequest
+from app.services.learning_engine import score_text, setup_security_models
 from app.services.radar import whatsapp_monitor_worker
 
 
@@ -62,6 +66,13 @@ class MonitorState:
     def set_running(self, running: bool) -> None:
         with self._state_lock:
             self.is_running = running
+
+
+@lru_cache(maxsize=1)
+def get_risk_event_repository() -> RiskEventRepository:
+    settings = get_settings()
+    settings.runtime_dir.mkdir(parents=True, exist_ok=True)
+    return RiskEventRepository(settings.risk_events_db_path)
 
 
 def create_app() -> FastAPI:
@@ -124,6 +135,45 @@ def create_app() -> FastAPI:
     @app.get("/api/status")
     async def get_status() -> JSONResponse:
         return JSONResponse(monitor_state.snapshot())
+
+    @app.post("/api/messages/analyze")
+    async def analyze_message(payload: ManualAnalyzeRequest) -> JSONResponse:
+        model_bundle = setup_security_models()
+        risk_score = float(score_text(payload.text, model_bundle)["risk_score"])
+        analysis_message = {
+            "text": payload.text,
+            "type": "manual-analysis",
+            "risk": risk_score,
+        }
+        publish_message(analysis_message)
+        return JSONResponse({"ok": True, "message": analysis_message})
+
+    @app.post("/api/messages/review")
+    async def review_message(payload: ManualReviewRequest) -> JSONResponse:
+        repository = get_risk_event_repository()
+        event_id = repository.create_event(
+            message_text=payload.message_text,
+            source_group="Manual Review",
+            sender_name="Dashboard Analyst",
+            risk_score=payload.risk_score,
+            model_version="manual-review-v1",
+        )
+        repository.record_decision(
+            event_id,
+            decision=payload.decision,
+            reviewer=payload.reviewer,
+        )
+
+        review_event = {
+            "event_id": event_id,
+            "text": payload.message_text,
+            "type": "review-decision",
+            "risk": payload.risk_score,
+            "decision": payload.decision,
+            "reviewer": payload.reviewer,
+        }
+        publish_message(review_event)
+        return JSONResponse({"ok": True, "event": review_event})
 
     @app.post("/api/monitor/start")
     async def start_monitor() -> JSONResponse:

@@ -17,6 +17,7 @@ from .learning_engine import score_text, setup_security_models
 MessageCallback = Callable[[dict], None]
 StatusCallback = Callable[[bool], None]
 SESSION_DIR = Path(__file__).resolve().parents[2] / ".whatsapp_session"
+AUTO_WARNING_THRESHOLD = 0.90
 
 
 def _get_recent_message_texts(driver: webdriver.Chrome) -> list[str]:
@@ -33,6 +34,29 @@ def _get_recent_message_texts(driver: webdriver.Chrome) -> list[str]:
             texts.append(text)
 
     return texts[-3:]
+
+
+def _create_chrome_driver(options: webdriver.ChromeOptions, on_message: MessageCallback):
+    try:
+        return webdriver.Chrome(
+            service=Service(ChromeDriverManager().install()),
+            options=options,
+        )
+    except Exception as startup_err:
+        error_text = str(startup_err)
+        if "could not reach host" in error_text.lower():
+            on_message(
+                {
+                    "text": (
+                        "System: Chrome driver download host could not be reached. "
+                        "Retrying with local Selenium/Chrome setup."
+                    ),
+                    "risk": 0.0,
+                    "type": "system",
+                }
+            )
+            return webdriver.Chrome(options=options)
+        raise
 
 
 def whatsapp_monitor_worker(
@@ -57,10 +81,7 @@ def whatsapp_monitor_worker(
     driver = None
     try:
         try:
-            driver = webdriver.Chrome(
-                service=Service(ChromeDriverManager().install()),
-                options=options,
-            )
+            driver = _create_chrome_driver(options, on_message)
         except Exception as startup_err:
             error_text = str(startup_err)
             if "user data directory is already in use" in error_text.lower():
@@ -126,7 +147,7 @@ def whatsapp_monitor_worker(
                         }
                     )
 
-                    if average_score > 0.75:
+                    if average_score >= AUTO_WARNING_THRESHOLD:
                         _send_warning(driver, average_score, on_message)
 
             except Exception as loop_exc:

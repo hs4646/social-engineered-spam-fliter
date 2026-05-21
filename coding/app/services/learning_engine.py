@@ -27,6 +27,13 @@ SHORTLINK_DOMAINS = {
     "tinyurl.com",
 }
 SUSPICIOUS_TLDS = {"click", "gq", "info", "live", "site", "top", "vip", "xyz"}
+TRUSTED_DOMAIN_SUFFIXES = ("gov.my", "edu.my")
+TRUSTED_EXACT_DOMAINS = (
+    "docs.google.com",
+    "forms.gle",
+    "forms.office.com",
+    "t.me",
+)
 BRAND_DOMAIN_HINTS = {
     "airasia": ("airasia.com",),
     "bank islam": ("bankislam.com",),
@@ -46,7 +53,7 @@ BRAND_DOMAIN_HINTS = {
     "rhb": ("rhbgroup.com", "rhb.com.my"),
     "shopee": ("shopee.com", "shopee.com.my"),
     "spotify": ("spotify.com",),
-    "telegram": ("telegram.org",),
+    "telegram": ("telegram.org", "t.me"),
     "touch n go": ("touchngo.com.my",),
     "unifi": ("unifi.com.my", "tm.com.my"),
     "utem": ("utem.edu.my",),
@@ -76,8 +83,11 @@ FEATURE_COLUMNS = [
     "has_suspicious_tld",
     "has_ip_address_url",
     "has_non_http_like_link_pattern",
+    "has_trusted_domain",
     "has_brand_name",
+    "has_brand_domain_match",
     "has_brand_domain_mismatch",
+    "has_event_context",
     "has_urgent_phrase",
     "has_money_phrase",
     "has_account_threat_phrase",
@@ -165,6 +175,21 @@ def _normalize_domain(url: str) -> str:
     return domain
 
 
+def _domain_matches_allowed(domain: str, allowed_domains: Sequence[str]) -> bool:
+    return any(domain == allowed or domain.endswith(f".{allowed}") for allowed in allowed_domains)
+
+
+def _is_trusted_domain(domain: str) -> bool:
+    if any(_domain_matches_allowed(domain, (trusted_domain,)) for trusted_domain in TRUSTED_EXACT_DOMAINS):
+        return True
+    if any(domain == suffix or domain.endswith(f".{suffix}") for suffix in TRUSTED_DOMAIN_SUFFIXES):
+        return True
+    return any(
+        _domain_matches_allowed(domain, allowed_domains)
+        for allowed_domains in BRAND_DOMAIN_HINTS.values()
+    )
+
+
 def extract_feature_signals(text: str) -> dict[str, float]:
     lowered = _normalize_spacing(text)
     urls = _extract_urls(lowered)
@@ -175,14 +200,19 @@ def extract_feature_signals(text: str) -> dict[str, float]:
     has_suspicious_tld = any(
         domain.rsplit(".", 1)[-1] in SUSPICIOUS_TLDS for domain in domains if "." in domain
     )
+    has_trusted_domain = bool(domains) and all(_is_trusted_domain(domain) for domain in domains)
     has_brand_name = any(brand in lowered for brand in BRAND_DOMAIN_HINTS)
+    has_brand_domain_match = 0.0
     has_brand_domain_mismatch = 0.0
 
     if has_brand_name and domains:
         for brand, allowed_domains in BRAND_DOMAIN_HINTS.items():
             if brand not in lowered:
                 continue
-            if any(not any(allowed in domain for allowed in allowed_domains) for domain in domains):
+            if all(_domain_matches_allowed(domain, allowed_domains) for domain in domains):
+                has_brand_domain_match = 1.0
+                continue
+            if any(not _domain_matches_allowed(domain, allowed_domains) for domain in domains):
                 has_brand_domain_mismatch = 1.0
                 break
 
@@ -218,12 +248,34 @@ def extract_feature_signals(text: str) -> dict[str, float]:
     action_phrases = (
         "click",
         "klik",
+        "join",
+        "daftar",
         "update",
         "kemaskini",
         "confirm",
         "sahkan",
         "login",
         "log masuk",
+    )
+    event_context_phrases = (
+        "announcement",
+        "daftar",
+        "hebahan",
+        "industry training",
+        "join this telegram group",
+        "latihan industri",
+        "lokasi",
+        "mahasiswa negara",
+        "pelajar tahun 1",
+        "pendaftaran",
+        "program",
+        "qr code",
+        "semester",
+        "students",
+        "tarikh",
+        "telegram group",
+        "tempat adalah terhad",
+        "peserta",
     )
 
     has_non_http_like_link_pattern = 1.0 if any("://" not in url for url in urls) else 0.0
@@ -235,8 +287,11 @@ def extract_feature_signals(text: str) -> dict[str, float]:
         "has_suspicious_tld": float(has_suspicious_tld),
         "has_ip_address_url": float(bool(IP_URL_RE.search(lowered))),
         "has_non_http_like_link_pattern": has_non_http_like_link_pattern,
+        "has_trusted_domain": float(has_trusted_domain),
         "has_brand_name": float(has_brand_name),
+        "has_brand_domain_match": has_brand_domain_match,
         "has_brand_domain_mismatch": has_brand_domain_mismatch,
+        "has_event_context": float(any(phrase in lowered for phrase in event_context_phrases)),
         "has_urgent_phrase": float(any(phrase in lowered for phrase in urgent_phrases)),
         "has_money_phrase": float(any(phrase in lowered for phrase in money_phrases)),
         "has_account_threat_phrase": float(
@@ -285,17 +340,41 @@ def _vectorize_messages(vectorizer: TfidfVectorizer, texts: Sequence[str]):
     return vectorizer.transform(vector_texts)
 
 
-def _apply_shortlink_boost(base_score: float, feature_signals: dict[str, float]) -> float:
-    boost = 0.0
+def _calibrate_risk_score(base_score: float, feature_signals: dict[str, float]) -> float:
+    adjustment = 0.0
     if feature_signals["has_shortlink"] and feature_signals["has_action_phrase"]:
-        boost += 0.08
+        adjustment += 0.08
     if feature_signals["has_shortlink"] and feature_signals["has_account_threat_phrase"]:
-        boost += 0.08
+        adjustment += 0.08
     if feature_signals["has_shortlink"] and feature_signals["has_brand_domain_mismatch"]:
-        boost += 0.1
+        adjustment += 0.1
     if feature_signals["has_suspicious_tld"] and feature_signals["has_urgent_phrase"]:
-        boost += 0.05
-    return min(0.99, base_score + boost)
+        adjustment += 0.05
+    if feature_signals["has_brand_domain_mismatch"] and feature_signals["has_action_phrase"]:
+        adjustment += 0.06
+    if feature_signals["has_brand_domain_mismatch"] and feature_signals["has_account_threat_phrase"]:
+        adjustment += 0.06
+
+    if feature_signals["has_trusted_domain"] and not feature_signals["has_brand_domain_mismatch"]:
+        if feature_signals["has_brand_domain_match"]:
+            adjustment -= 0.12
+        elif (
+            feature_signals["has_event_context"]
+            and not feature_signals["has_account_threat_phrase"]
+            and not feature_signals["has_money_phrase"]
+        ):
+            adjustment -= 0.12
+        elif (
+            feature_signals["has_urgent_phrase"]
+            or feature_signals["has_account_threat_phrase"]
+            or feature_signals["has_action_phrase"]
+            or feature_signals["has_money_phrase"]
+        ):
+            adjustment -= 0.08
+        else:
+            adjustment -= 0.05
+
+    return max(0.01, min(0.99, base_score + adjustment))
 
 
 def score_text(text: str, bundle: dict[str, object]) -> dict[str, object]:
@@ -307,7 +386,7 @@ def score_text(text: str, bundle: dict[str, object]) -> dict[str, object]:
     svm_score = float(bundle["svm_model"].predict_proba(combined)[0][1])
     base_score = (rf_score + svm_score) / 2
     return {
-        "risk_score": _apply_shortlink_boost(base_score, feature_signals),
+        "risk_score": _calibrate_risk_score(base_score, feature_signals),
         "rf_score": rf_score,
         "svm_score": svm_score,
         "feature_signals": feature_signals,
