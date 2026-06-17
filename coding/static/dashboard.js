@@ -24,12 +24,18 @@ export function shouldRunAction(action, { isRunning, requestPending }) {
   return true;
 }
 
-export function canManuallyAnalyze(message) {
-  return message.type === 'chat' && Boolean((message.text || '').trim());
+export function canManuallyAnalyze(message, reviewedTexts) {
+  if (message.type !== 'chat' || !Boolean((message.text || '').trim())) {
+    return false;
+  }
+  if (reviewedTexts && reviewedTexts.has(message.text.trim())) {
+    return false;
+  }
+  return true;
 }
 
-export function shouldRunManualAnalyze(message, { analyzePending }) {
-  return !analyzePending && canManuallyAnalyze(message);
+export function shouldRunManualAnalyze(message, { analyzePending, reviewedTexts }) {
+  return !analyzePending && canManuallyAnalyze(message, reviewedTexts);
 }
 
 export function canReviewManualAnalysis(message) {
@@ -112,6 +118,23 @@ function reviewDecisionLabel(decision) {
   return 'Review Decision';
 }
 
+function loadReviewedTexts() {
+  try {
+    const stored = localStorage.getItem('reviewedTexts');
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveReviewedTexts(texts) {
+  try {
+    localStorage.setItem('reviewedTexts', JSON.stringify([...texts]));
+  } catch {
+    // localStorage full or unavailable - ignore
+  }
+}
+
 function initDashboard() {
   const feedList = document.getElementById('feedList');
   const statusBadge = document.getElementById('statusBadge');
@@ -132,6 +155,7 @@ function initDashboard() {
     analyzePending: false,
     reviewPending: false,
     messages: [],
+    reviewedTexts: loadReviewedTexts(),
   };
 
   function syncControls() {
@@ -163,7 +187,7 @@ function initDashboard() {
     const meta = riskMeta(message);
     const wrapper = document.createElement('article');
     wrapper.className = `feed-entry risk-${meta.level}`;
-    const showAnalyzeButton = canManuallyAnalyze(message);
+    const showAnalyzeButton = canManuallyAnalyze(message, state.reviewedTexts);
     const showReviewControls = canReviewManualAnalysis(message);
     const title = message.type === 'review-decision' ? reviewDecisionLabel(message.decision) : meta.label;
     wrapper.innerHTML = `
@@ -342,6 +366,8 @@ function initDashboard() {
 
       try {
         await postJson('/api/messages/review', payload);
+        state.reviewedTexts.add(message.text.trim());
+        saveReviewedTexts(state.reviewedTexts);
       } catch (error) {
         alert(error.message);
       } finally {

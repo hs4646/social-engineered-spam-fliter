@@ -54,29 +54,54 @@ assert.equal(
   true,
 );
 
+// canManuallyAnalyze - basic tests
 assert.equal(
-  canManuallyAnalyze({ type: 'chat', text: 'Suspicious login link' }),
+  canManuallyAnalyze({ type: 'chat', text: 'Suspicious login link' }, new Set()),
   true,
 );
 assert.equal(
-  canManuallyAnalyze({ type: 'system', text: 'System event' }),
+  canManuallyAnalyze({ type: 'system', text: 'System event' }, new Set()),
+  false,
+);
+
+// canManuallyAnalyze - reviewedTexts tests
+assert.equal(
+  canManuallyAnalyze({ type: 'chat', text: 'test message' }, new Set(['test message'])),
   false,
 );
 assert.equal(
+  canManuallyAnalyze({ type: 'chat', text: 'test message' }, new Set(['other message'])),
+  true,
+);
+assert.equal(
+  canManuallyAnalyze({ type: 'chat', text: 'test message' }, undefined),
+  true,
+);
+
+// shouldRunManualAnalyze tests
+assert.equal(
   shouldRunManualAnalyze(
     { type: 'chat', text: 'Suspicious login link' },
-    { analyzePending: false },
+    { analyzePending: false, reviewedTexts: new Set() },
   ),
   true,
 );
 assert.equal(
   shouldRunManualAnalyze(
     { type: 'chat', text: 'Suspicious login link' },
-    { analyzePending: true },
+    { analyzePending: true, reviewedTexts: new Set() },
+  ),
+  false,
+);
+assert.equal(
+  shouldRunManualAnalyze(
+    { type: 'chat', text: 'Already reviewed message' },
+    { analyzePending: false, reviewedTexts: new Set(['Already reviewed message']) },
   ),
   false,
 );
 
+// canReviewManualAnalysis tests
 assert.equal(
   canReviewManualAnalysis({ type: 'manual-analysis', text: 'Suspicious login link', risk: 0.88 }),
   true,
@@ -85,6 +110,8 @@ assert.equal(
   canReviewManualAnalysis({ type: 'chat', text: 'Suspicious login link', risk: 0.88 }),
   false,
 );
+
+// shouldSubmitReviewDecision tests
 assert.equal(
   shouldSubmitReviewDecision(
     { type: 'manual-analysis', text: 'Suspicious login link', risk: 0.88 },
