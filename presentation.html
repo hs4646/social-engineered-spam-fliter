@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UTeM SOC Phishing Detection System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            padding: 60px 80px;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2f 100%);
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            transform: translateX(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            pointer-events: none;
+        }
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            pointer-events: auto;
+        }
+        .slide.prev {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        .slide-header {
+            font-size: 2.5em;
+            color: #00d4ff;
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            border-bottom: 2px solid #00d4ff;
+            padding-bottom: 10px;
+        }
+        .slide-content {
+            font-size: 1.3em;
+            line-height: 1.6;
+        }
+        .title-slide {
+            text-align: center;
+            justify-content: center;
+            align-items: center;
+        }
+        .title-slide h1 {
+            font-size: 3.5em;
+            color: #00d4ff;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.7);
+        }
+        .title-slide h2 {
+            font-size: 2em;
+            color: #00ff88;
+            margin-bottom: 30px;
+        }
+        .title-slide p {
+            font-size: 1.5em;
+            color: #aaa;
+        }
+        .architecture-diagram {
+            background: rgba(0, 212, 255, 0.1);
+            border: 2px solid #00d4ff;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .code-snippet {
+            background: #1e1e1e;
+            border-left: 4px solid #00d4ff;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Consolas', monospace;
+            font-size: 1.1em;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .feature-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #333;
+        }
+        .feature-list li:before {
+            content: "▸ ";
+            color: #00ff88;
+            font-weight: bold;
+        }
+        .metric-box {
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 2.5em;
+            color: #00ff88;
+            font-weight: bold;
+        }
+        .metric-label {
+            font-size: 1.2em;
+            color: #aaa;
+        }
+        .nav-controls {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+        .nav-btn {
+            background: rgba(0, 212, 255, 0.2);
+            border: 2px solid #00d4ff;
+            color: #00d4ff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        .nav-btn:hover {
+            background: rgba(0, 212, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        .slide-number {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            color: #666;
+            font-size: 1em;
+        }
+        .highlight {
+            color: #00d4ff;
+            font-weight: bold;
+        }
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+        .column {
+            padding: 20px;
+            background: rgba(0, 212, 255, 0.05);
+            border-radius: 10px;
+        }
+        .code-screenshot {
+            background: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        .code-screenshot-header {
+            background: #2d2d30;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #3e3e42;
+        }
+        .code-screenshot-dots {
+            display: flex;
+            gap: 6px;
+            margin-right: 15px;
+        }
+        .code-screenshot-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .code-screenshot-dot.red { background: #ff5f56; }
+        .code-screenshot-dot.yellow { background: #ffbd2e; }
+        .code-screenshot-dot.green { background: #27c93f; }
+        .code-screenshot-title {
+            color: #cccccc;
+            font-size: 0.9em;
+        }
+        .code-screenshot-content {
+            padding: 15px;
+            overflow-x: auto;
+            font-size: 0.85em;
+            line-height: 1.4;
+            color: #d4d4d4;
+        }
+        .code-screenshot-content pre {
+            margin: 0;
+            white-space: pre;
+        }
+        .code-keyword { color: #569cd6; }
+        .code-string { color: #ce9178; }
+        .code-comment { color: #6a9955; }
+        .code-function { color: #dcdcaa; }
+        .code-number { color: #b5cea8; }
+        .architecture-layer {
+            background: rgba(0, 212, 255, 0.1);
+            border: 2px solid #00d4ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            position: relative;
+            transition: all 0.3s;
+        }
+        .architecture-layer:hover {
+            background: rgba(0, 212, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        .architecture-layer.presentation { border-color: #00ff88; }
+        .architecture-layer.mitigation { border-color: #ff6b6b; }
+        .architecture-layer.ml { border-color: #ffd93d; }
+        .architecture-layer.logic { border-color: #6c5ce7; }
+        .architecture-layer.extraction { border-color: #00cec9; }
+        .architecture-icon {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2em;
+        }
+        .architecture-arrow {
+            text-align: center;
+            color: #666;
+            font-size: 1.5em;
+            margin: 5px 0;
+        }
+        .progress-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide" id="slide1">
+        <div class="title-slide">
+            <h1>UTeM SOC Phishing Detection System</h1>
+            <h2>Intelligent Management Framework for Mitigating Social-Engineered Spam and Cyber Threats in University Social Groups</h2>
+            <p>Real-time WhatsApp Monitoring with Machine Learning</p>
+        </div>
+    </div>
+
+    <div class="slide" id="slide2">
+        <div class="slide-header">Problem Statement</div>
+        <div class="slide-content">
+            <ul class="feature-list">
+                <li>University WhatsApp groups are high-trust environments vulnerable to phishing attacks</li>
+                <li>Manual moderation is limited - administrators may not be online when threats appear</li>
+                <li>Existing commercial filters focus on standard English, not Malaysian multilingual communication</li>
+                <li>Students may click malicious links before warnings are posted</li>
+                <li>Need for real-time, automated detection and response system</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="slide" id="slide3">
+        <div class="slide-header">Project Objectives</div>
+        <div class="slide-content">
+            <ul class="feature-list">
+                <li>Develop real-time WhatsApp group monitoring system</li>
+                <li>Implement ML-based phishing detection for Manglish (Malaysian English)</li>
+                <li>Create automated warning system for high-risk threats</li>
+                <li>Build interactive dashboard for system monitoring</li>
+                <li>Achieve high accuracy with low false positive rate</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="slide" id="slide4">
+        <div class="slide-header">Research Methodology</div>
+        <div class="slide-content">
+            <p><span class="highlight">Iterative Prototyping (Agile) Approach:</span></p>
+            <ul class="feature-list">
+                <li>Phase 1: Requirements and Data Gathering</li>
+                <li>Phase 2: Data Preprocessing and ML Modeling</li>
+                <li>Phase 3: Backend and API Development</li>
+                <li>Phase 4: Web Automation Integration</li>
+                <li>Phase 5: Real-World Simulation and Testing</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="slide" id="slide5">
+        <div class="slide-header">Data Collection & Engineering</div>
+        <div class="slide-content">
+            <div class="two-column">
+                <div class="column">
+                    <h3>Cross-Lingual Corpus</h3>
+                    <ul class="feature-list">
+                        <li>English Spam/Phishing datasets from Kaggle</li>
+                        <li>Malay Scam datasets (Macau Scam, fake bank SMS)</li>
+                        <li>Chinese Spam datasets (WeChat/WhatsApp scams)</li>
+                        <li>Merged into unified training corpus</li>
+                        <li>10,935 total samples</li>
+                    </ul>
+                </div>
+                <div class="column">
+                    <h3>Manglish Phenomenon</h3>
+                    <p>Hybrid sentences mixing English syntax with Malay vocabulary:</p>
+                    <div class="code-snippet">"Tolong click this link to update your UTeM portal immediately"</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" id="slide6">
+        <div class="slide-header">Preprocessing Pipeline</div>
+        <div class="slide-content">
+            <ul class="feature-list">
+                <li><span class="highlight">Text Normalization:</span> Lowercasing, special character stripping</li>
+                <li><span class="highlight">Manglish Normalization:</span> "u" → "you", "pls" → "please", "blh" → "boleh"</li>
+                <li><span class="highlight">Stop-word Removal:</span> Bilingual English-Malay stop-word dictionary</li>
+                <li><span class="highlight">Tokenization:</span> Split text into tokens</li>
+                <li><span class="highlight">TF-IDF Vectorization:</span> Convert text to numerical vectors</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="slide" id="slide7">
+        <div class="slide-header">Machine Learning Models</div>
+        <div class="slide-content">
+            <div class="two-column">
+                <div class="column">
+                    <h3>Random Forest (Primary)</h3>
+                    <ul class="feature-list">
+                        <li>250 decision trees</li>
+                        <li>Ensemble learning method</li>
+                        <li>Resilient to overfitting</li>
+                        <li>Majority voting mechanism</li>
+                    </ul>
+                </div>
+                <div class="column">
+                    <h3>Support Vector Machine (Baseline)</h3>
+                    <ul class="feature-list">
+                        <li>Linear kernel</li>
+                        <li>Maximum margin classification</li>
+                        <li>Secondary validation model</li>
+                        <li>Probability estimates enabled</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" id="slide8">
+        <div class="slide-header">High-Level Architecture</div>
+        <div class="slide-content">
+            <div class="architecture-layer presentation">
+                <h3>PRESENTATION LAYER</h3>
+                <p>Dashboard (HTML/JS) ← WebSocket → FastAPI</p>
+                <div class="architecture-icon">🖥️</div>
+            </div>
+            <div class="architecture-arrow">↑</div>
+            <div class="architecture-layer mitigation">
+                <h3>MITIGATION LAYER</h3>
+                <p>Auto-warning via Selenium ← Risk Score</p>
+                <div class="architecture-icon">⚠️</div>
+            </div>
+            <div class="architecture-arrow">↑</div>
+            <div class="architecture-layer ml">
+                <h3>MACHINE LEARNING LAYER</h3>
+                <p>TF-IDF + RF + SVM → Risk Score (0-100%)</p>
+                <div class="architecture-icon">🤖</div>
+            </div>
+            <div class="architecture-arrow">↑</div>
+            <div class="architecture-layer logic">
+                <h3>LOGIC & PROCESSING LAYER</h3>
+                <p>FastAPI Backend + WebSocket Server</p>
+                <div class="architecture-icon">⚙️</div>
+            </div>
+            <div class="architecture-arrow">↑</div>
+            <div class="architecture-layer extraction">
+                <h3>DATA EXTRACTION LAYER</h3>
+                <p>Selenium WebDriver → WhatsApp Web Scraper</p>
+                <div class="architecture-icon">📱</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" id="slide9">
+        <div class="slide-header">Data Extraction Layer</div>
+        <div class="slide-content">
+            <p><span class="highlight">Selenium WhatsApp Web Scraper:</span></p>
+            <ul class="feature-list">
+                <li>Headless Chrome browser automation</li>
+                <li>Polls every 2 seconds for new messages</li>
+                <li>CSS selector: div[role='row'] span[dir='ltr']</li>
+                <li>Deduplication with sliding window (20 messages)</li>
+                <li>Session persistence via Chrome profile</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="slide" id="slide10">
+        <div class="slide-header">ML Engine: Scoring Function</div>
+        <div class="slide-content">
+            <p><span class="highlight">Core scoring algorithm (learning_engine.py):</span></p>
+            <div class="code-screenshot">
+                <div class="code-screenshot-header">
+                    <div class="code-screenshot-dots">
+                        <div class="code-screenshot-dot red"></div>
+                        <div class="code-screenshot-dot yellow"></div>
+                        <div class="code-screenshot-dot green"></div>
+                    </div>
+                    <div class="code-screenshot-title">learning_engine.py - score_text()</div>
+                </div>
+                <div class="code-screenshot-content">
+<pre><span class="code-keyword">def</span> <span class="code-function">score_text</span>(text: <span class="code-keyword">str</span>, bundle: <span class="code-keyword">dict</span>[<span class="code-keyword">str</span>, <span class="code-keyword">object</span>]) -> <span class="code-keyword">dict</span>[<span class="code-keyword">str</span>, <span class="code-keyword">object</span>]:
+    feature_signals = <span class="code-function">extract_feature_signals</span>(text)
+    vector = <span class="code-function">_vectorize_messages</span>(bundle[<span class="code-string">"vectorizer"</span>], [text])
+    dense = csr_matrix([[feature_signals[name] <span class="code-keyword">for</span> name <span class="code-keyword">in</span> FEATURE_COLUMNS]])
+    combined = hstack([vector, dense], format=<span class="code-string">"csr"</span>)
+    rf_score = <span class="code-keyword">float</span>(bundle[<span class="code-string">"rf_model"</span>].predict_proba(combined)[<span class="code-number">0</span>][<span class="code-number">1</span>])
+    svm_score = <span class="code-keyword">float</span>(bundle[<span class="code-string">"svm_model"</span>].predict_proba(combined)[<span class="code-number">0</span>][<span class="code-number">1</span>])
+    base_score = (rf_score + svm_score) / <span class="code-number">2</span>
+    <span class="code-keyword">return</span> {
+        <span class="code-string">"risk_score"</span>: <span class="code-function">_calibrate_risk_score</span>(base_score, feature_signals),
+        <span class="code-string">"rf_score"</span>: rf_score,
+        <span class="code-string">"svm_score"</span>: svm_score,
+        <span class="code-string">"feature_signals"</span>: feature_signals,
+        <span class="code-string">"model_version"</span>: bundle[<span class="code-string">"metrics"</span>][<span class="code-string">"model_version"</span>],
+    }</pre>
+                </div>
+            </div>
+            <p style="margin-top: 20px;"><span class="highlight">Process:</span> Extract features → Vectorize → RF + SVM scoring → Average → Calibrate → Return risk score</p>
+        </div>
+    </div>
+
+    <div class="slide" id="slide11">
+        <div class="slide-header">WhatsApp Monitoring Loop</div>
+        <div class="slide-content">
+            <p><span class="highlight">Real-time message processing (radar.py):</span></p>
+            <div class="code-screenshot">
+                <div class="code-screenshot-header">
+                    <div class="code-screenshot-dots">
+                        <div class="code-screenshot-dot red"></div>
+                        <div class="code-screenshot-dot yellow"></div>
+                        <div class="code-screenshot-dot green"></div>
+                    </div>
+                    <div class="code-screenshot-title">radar.py - whatsapp_monitor_worker()</div>
+                </div>
+                <div class="code-screenshot-content">
+<pre><span class="code-keyword">while</span> should_continue():
+    <span class="code-keyword">try</span>:
+        recent_messages = <span class="code-function">_get_recent_message_texts</span>(driver)
+        
+        <span class="code-keyword">for</span> latest_message <span class="code-keyword">in</span> recent_messages:
+            <span class="code-keyword">if not</span> latest_message.strip() <span class="code-keyword">or</span> <span class="code-string">"[UTeM SOC Bot"</span> <span class="code-keyword">in</span> latest_message:
+                <span class="code-keyword">continue</span>
+            
+            <span class="code-keyword">if</span> latest_message <span class="code-keyword">in</span> seen_messages:
+                <span class="code-keyword">continue</span>
+            
+            seen_messages.append(latest_message)
+            
+            average_score = <span class="code-keyword">float</span>(<span class="code-function">score_text</span>(latest_message, model_bundle)[<span class="code-string">"risk_score"</span>])
+            
+            on_message({
+                <span class="code-string">"text"</span>: latest_message,
+                <span class="code-string">"type"</span>: <span class="code-string">"chat"</span>,
+                <span class="code-string">"risk"</span>: <span class="code-keyword">float</span>(average_score),
+            })
+            
+            <span class="code-keyword">if</span> average_score >= AUTO_WARNING_THRESHOLD:
+                <span class="code-function">_send_warning</span>(driver, average_score, on_message)
+                
+    <span class="code-keyword">except</span> Exception <span class="code-keyword">as</span> loop_exc:
+        err_str = <span class="code-keyword">str</span>(loop_exc)
+        <span class="code-keyword">if</span> <span class="code-string">"no such window"</span> <span class="code-keyword">in</span> err_str <span class="code-keyword">or</span> <span class="code-string">"chrome not reachable"</span> <span class="code-keyword">in</span> err_str:
+            <span class="code-keyword">break</span>
+        time.sleep(<span class="code-number">2</span>)
+    
+    time.sleep(<span class="code-number">2.0</span>)</pre>
+                </div>
+            </div>
+            <p style="margin-top: 20px;"><span class="highlight">Flow:</span> Poll messages → Deduplicate → Score → Broadcast → Auto-warn if risk ≥ 90%</p>
+        </div>
+    </div>
+
+    <div class="slide" id="slide12">
+        <div class="slide-header">ML Engine: Feature Engineering</div>
+        <div class="slide-content">
+            <p><span class="highlight">19 Hand-crafted Feature Signals:</span></p>
+            <div class="two-column">
+                <div class="column">
+                    <h3>URL & Domain Features</h3>
+                    <ul class="feature-list">
+                        <li>has_url, url_count</li>
+                        <li>has_shortlink, shortlink_count</li>
+                        <li>has_suspicious_tld</li>
+                        <li>has_ip_address_url</li>
+                        <li>has_trusted_domain</li>
+                        <li>has_non_http_like_link_pattern</li>
+                    </ul>
+                </div>
+                <div class="column">
+                    <h3>Brand & Semantic Features</h3>
+                    <ul class="feature-list">
+                        <li>has_brand_name</li>
+                        <li>has_brand_domain_match/mismatch</li>
+                        <li>has_event_context</li>
+                        <li>has_urgent_phrase</li>
+                        <li>has_money_phrase</li>
+                        <li>has_account_threat_phrase</li>
+                        <li>has_action_phrase</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="two-column" style="margin-top: 20px;">
+                <div class="column">
+                    <h3>Chinese Language Features</h3>
+                    <ul class="feature-list">
+                        <li>has_chinese</li>
+                        <li>chinese_action_phrase</li>
+                        <li>chinese_url</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" id="slide13">
+        <div class="slide-header">Risk Calibration Rules</div>
+        <div class="slide-content">
+            <p><span class="highlight">Rule-based post-processing adjustments:</span></p>
+            <ul class="feature-list">
+                <li><span class="highlight">Increase risk:</span> Shortlink + action phrase (+0.08)</li>
+                <li><span class="highlight">Increase risk:</span> Brand domain mismatch (+0.10)</li>
+                <li><span class="highlight">Increase risk:</span> Chinese action phrase (+0.05)</li>
+                <li><span class="highlight">Increase risk:</span> Chinese URL (+0.08)</li>
+                <li><span class="highlight">Decrease risk:</span> Trusted domain + brand match (-0.12)</li>
+                <li><span class="highlight">Decrease risk:</span> Trusted domain + event context (-0.12)</li>
+                <li><span class="highlight">Decrease risk:</span> University context without shortlinks (-0.15)</li>
+                <li>Final score clamped to [0.01, 0.99]</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="slide" id="slide14">
+        <div class="slide-header">Backend & API Design</div>
+        <div class="slide-content">
+            <p><span class="highlight">FastAPI endpoint example (main.py):</span></p>
+            <div class="code-screenshot">
+                <div class="code-screenshot-header">
+                    <div class="code-screenshot-dots">
+                        <div class="code-screenshot-dot red"></div>
+                        <div class="code-screenshot-dot yellow"></div>
+                        <div class="code-screenshot-dot green"></div>
+                    </div>
+                    <div class="code-screenshot-title">main.py - POST /api/messages/analyze</div>
+                </div>
+                <div class="code-screenshot-content">
+<pre><span class="code-keyword">@app</span>.post(<span class="code-string">"/api/messages/analyze"</span>)
+<span class="code-keyword">async def</span> <span class="code-function">analyze_message</span>(payload: ManualAnalyzeRequest) -> JSONResponse:
+    model_bundle = <span class="code-function">setup_security_models</span>()
+    risk_score = <span class="code-keyword">float</span>(<span class="code-function">score_text</span>(payload.text, model_bundle)[<span class="code-string">"risk_score"</span>])
+    analysis_message = {
+        <span class="code-string">"text"</span>: payload.text,
+        <span class="code-string">"type"</span>: <span class="code-string">"manual-analysis"</span>,
+        <span class="code-string">"risk"</span>: risk_score,
+    }
+    <span class="code-function">publish_message</span>(analysis_message)
+    <span class="code-keyword">return</span> JSONResponse({<span class="code-string">"ok"</span>: <span class="code-keyword">True</span>, <span class="code-string">"message"</span>: analysis_message})</pre>
+                </div>
+            </div>
+            <p style="margin-top: 20px;"><span class="highlight">Endpoints:</span> analyze, review, start/stop monitor, status, WebSocket feed</p>
+        </div>
+    </div>
+
+    <div class="slide" id="slide15">
+        <div class="slide-header">Tech Stack</div>
+        <div class="slide-content">
+            <div class="two-column">
+                <div class="column">
+                    <h3>Backend</h3>
+                    <ul class="feature-list">
+                        <li>Python 3.10+</li>
+                        <li>FastAPI (async web framework)</li>
+                        <li>Uvicorn (ASGI server)</li>
+                        <li>SQLite (risk events storage)</li>
+                    </ul>
+                </div>
+                <div class="column">
+                    <h3>Machine Learning</h3>
+                    <ul class="feature-list">
+                        <li>Scikit-learn (RF, SVM, TF-IDF)</li>
+                        <li>Pandas (data manipulation)</li>
+                        <li>SciPy (sparse matrices)</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="two-column" style="margin-top: 20px;">
+                <div class="column">
+                    <h3>Automation</h3>
+                    <ul class="feature-list">
+                        <li>Selenium WebDriver</li>
+                        <li>ChromeDriver Manager</li>
+                        <li>Pyperclip (clipboard)</li>
+                    </ul>
+                </div>
+                <div class="column">
+                    <h3>Frontend</h3>
+                    <ul class="feature-list">
+                        <li>HTML5/CSS3</li>
+                        <li>JavaScript (WebSocket client)</li>
+                        <li>Jinja2 templates</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" id="slide16">
+        <div class="slide-header">Key Features</div>
+        <div class="slide-content">
+            <ul class="feature-list">
+                <li><span class="highlight">Manglish Normalization:</span> Handles Malaysian English slang</li>
+                <li><span class="highlight">Brand Impersonation Detection:</span> 45+ Malaysian brands monitored</li>
+                <li><span class="highlight">Dual ML Scoring:</span> RF + SVM averaging with rule calibration</li>
+                <li><span class="highlight">Real-time WebSocket:</span> Live message feed to dashboard</li>
+                <li><span class="highlight">Auto-warning System:</span> Sends alerts at 90%+ risk score</li>
+                <li><span class="highlight">Chinese Language Support:</span> Detects Chinese spam patterns</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="slide" id="slide17">
+        <div class="slide-header">Evaluation Metrics</div>
+        <div class="slide-content">
+            <div class="two-column">
+                <div class="column">
+                    <div class="metric-box">
+                        <div class="metric-value">97.7%</div>
+                        <div class="metric-label">Random Forest Accuracy</div>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="metric-box">
+                        <div class="metric-value">98.9%</div>
+                        <div class="metric-label">SVM Accuracy</div>
+                    </div>
+                </div>
+            </div>
+            <p style="margin-top: 30px;"><span class="highlight">Confusion Matrix Metrics:</span></p>
+            <ul class="feature-list">
+                <li><span class="highlight">True Positives:</span> Scam messages correctly detected</li>
+                <li><span class="highlight">True Negatives:</span> Safe messages correctly ignored</li>
+                <li><span class="highlight">False Positives:</span> Safe messages incorrectly flagged (minimize)</li>
+                <li><span class="highlight">False Negatives:</span> Missed threats (critical to minimize)</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="slide" id="slide18">
+        <div class="slide-header">Demo</div>
+        <div class="slide-content">
+            <p><span class="highlight">System Walkthrough:</span></p>
+            <ul class="feature-list">
+                <li>1. Start monitoring: POST /api/monitor/start</li>
+                <li>2. Scan QR code on WhatsApp Web</li>
+                <li>3. System polls messages every 2 seconds</li>
+                <li>4. Messages scored in real-time</li>
+                <li>5. High-risk messages trigger auto-warnings</li>
+                <li>6. Dashboard shows live feed with risk scores</li>
+            </ul>
+            <div class="code-snippet">
+// Example auto-warning message:
+[UTeM SOC Bot Automated Warning]
+High-risk phishing threat detected in the previous message (Risk: 92.45%).
+Do not click any links or share personal information.
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" id="slide19">
+        <div class="slide-header">Results & Impact</div>
+        <div class="slide-content">
+            <ul class="feature-list">
+                <li><span class="highlight">Real-time Detection:</span> 2-second response latency</li>
+                <li><span class="highlight">Cross-lingual Support:</span> Handles English, Malay, Manglish, and Chinese</li>
+                <li><span class="highlight">Low False Positives:</span> Rule-based calibration reduces alerts</li>
+                <li><span class="highlight">Scalable Architecture:</span> Modular design for easy extension</li>
+                <li><span class="highlight">Future Work:</span> Expand to other messaging platforms, improve ML models</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="slide" id="slide20">
+        <div class="title-slide">
+            <h1>Questions & Discussion</h1>
+            <h2>Thank You!</h2>
+            <p>UTeM SOC Phishing Detection System</p>
+        </div>
+    </div>
+
+    <div class="slide-number">Slide <span id="currentSlide">1</span> of <span id="totalSlides">20</span></div>
+
+    <div class="nav-controls">
+        <button class="nav-btn" onclick="prevSlide()">← Previous</button>
+        <button class="nav-btn" onclick="nextSlide()">Next →</button>
+    </div>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 20;
+        const progressBar = document.getElementById('progressBar');
+
+        function updateProgressBar() {
+            const percentage = (currentSlide / totalSlides) * 100;
+            progressBar.style.width = percentage + '%';
+        }
+
+        function showSlide(n) {
+            if (n < 1 || n > totalSlides) return;
+            
+            // Remove active class from current slide
+            const currentElement = document.querySelector('.slide.active');
+            if (currentElement) {
+                currentElement.classList.remove('active');
+                // Add prev class for transition effect
+                currentElement.classList.add('prev');
+                // Remove prev class after transition
+                setTimeout(() => {
+                    currentElement.classList.remove('prev');
+                }, 500);
+            }
+            
+            // Add active class to new slide
+            const newElement = document.getElementById(`slide${n}`);
+            newElement.classList.add('active');
+            
+            currentSlide = n;
+            document.getElementById('currentSlide').textContent = currentSlide;
+            updateProgressBar();
+        }
+
+        function nextSlide() {
+            showSlide(currentSlide + 1);
+        }
+
+        function prevSlide() {
+            showSlide(currentSlide - 1);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.clientX > window.innerWidth / 2) {
+                nextSlide();
+            } else {
+                prevSlide();
+            }
+        });
+
+        // Initialize progress bar
+        updateProgressBar();
+    </script>
+</body>
+</html>

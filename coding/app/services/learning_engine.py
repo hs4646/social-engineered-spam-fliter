@@ -27,12 +27,118 @@ SHORTLINK_DOMAINS = {
     "tinyurl.com",
 }
 SUSPICIOUS_TLDS = {"click", "gq", "info", "live", "site", "top", "vip", "xyz"}
-TRUSTED_DOMAIN_SUFFIXES = ("gov.my", "edu.my")
+TRUSTED_DOMAIN_SUFFIXES = (
+    "gov.my",
+    "edu.my",
+    "gov.sg",
+    "edu.sg",
+    "ac.uk",
+    "edu.au",
+)
 TRUSTED_EXACT_DOMAINS = (
     "docs.google.com",
     "forms.gle",
     "forms.office.com",
     "t.me",
+    "meet.google.com",
+    "zoom.us",
+    "usm.my",
+    "utm.my",
+    "ukm.my",
+    "upm.my",
+    "ums.edu.my",
+    "unisza.edu.my",
+    "ump.edu.my",
+    "usim.edu.my",
+    "uums.edu.my",
+    "aidc.my",
+    "ptptn.gov.my",
+    "e-daftar.ptptn.gov.my",
+    "spu.ptptn.gov.my",
+    "splpk.kpt.gov.my",
+    "moe.gov.my",
+    "mohe.gov.my",
+    "jpa.gov.my",
+    "lhdn.gov.my",
+    "hasil.gov.my",
+    "epf.gov.my",
+    "kwsp.gov.my",
+    "socso.gov.my",
+    "perkeso.gov.my",
+    "jpj.gov.my",
+    "myeg.com.my",
+    "pos.com.my",
+    "telekom.com.my",
+    "tm.com.my",
+    "maxis.com.my",
+    "celcom.com.my",
+    "digi.com.my",
+    "hotlink.com.my",
+    "tnb.com.my",
+    "pba.com.my",
+    "sarawakenergy.com.my",
+    "sabahenergy.com",
+)
+# Chinese-specific URL patterns
+CHINESE_URL_RE = re.compile(r"(?i)(?:https?://|www\.|wa\.me/|weixin://|wxpay://)[^\s]+")
+# Chinese action phrases commonly found in spam
+CHINESE_ACTION_PHRASES = (
+    "点击",    # click
+    "立即",    # immediately
+    "马上",    # immediately
+    "赶紧",    # hurry
+    "联系",    # contact
+    "添加",    # add
+    "扫描",    # scan
+    "注册",    # register
+    "登录",    # login
+    "验证",    # verify
+    "确认",    # confirm
+    "更新",    # update
+    "激活",    # activate
+    "领取",    # claim
+    "免费",    # free
+    "优惠",    # discount
+    "促销",    # promotion
+    "限时",    # limited time
+    "紧急",    # urgent
+    "通知",    # notice
+    "警告",    # warning
+    "账户",    # account
+    "密码",    # password
+    "余额",    # balance
+    "转账",    # transfer
+    "付款",    # payment
+    "红包",    # red packet
+    "抽奖",    # lottery
+    "中奖",    # win lottery
+    "恭喜",    # congratulations
+    "免费送",  # free gift
+    "免费领",  # free claim
+    "限时抢",  # limited time grab
+    "秒杀",    # flash sale
+    "朋友圈",  # WeChat Moments
+    "微信群",  # WeChat group
+    "加好友",  # add friend
+    "收款码",  # payment code
+    "付款码",  # payment code
+    "二维码",  # QR code
+    "扫码",    # scan code
+    "充值",    # recharge
+    "缴费",    # pay fee
+    "欠费",    # overdue
+    "停机",    # service suspended
+    "实名",    # real name
+    "认证",    # authentication
+    "冻结",    # freeze
+    "解冻",    # unfreeze
+    "逾期",    # overdue
+    "起诉",    # lawsuit
+    "法院",    # court
+    "公安",    # police
+    "逮捕",    # arrest
+    "诈骗",    # fraud
+    "骗子",    # cheater
 )
 BRAND_DOMAIN_HINTS = {
     "airasia": ("airasia.com",),
@@ -42,13 +148,13 @@ BRAND_DOMAIN_HINTS = {
     "hasil": ("hasil.gov.my",),
     "icloud": ("apple.com", "icloud.com"),
     "j&t": ("jtexpress.my", "jtexpress.com"),
-    "kwsp": ("kwsp.gov.my",),
+    "kwsp": ("kwsp.gov.my", "epf.gov.my"),
     "lazada": ("lazada.com", "lazada.com.my"),
-    "lhdn": ("hasil.gov.my",),
+    "lhdn": ("lhdn.gov.my", "hasil.gov.my"),
     "maybank": ("maybank2u.com.my", "maybank.com"),
     "netflix": ("netflix.com",),
     "pos malaysia": ("pos.com.my",),
-    "ptptn": ("ptptn.gov.my",),
+    "ptptn": ("ptptn.gov.my", "e-daftar.ptptn.gov.my"),
     "public bank": ("publicbank.com.my",),
     "rhb": ("rhbgroup.com", "rhb.com.my"),
     "shopee": ("shopee.com", "shopee.com.my"),
@@ -57,6 +163,28 @@ BRAND_DOMAIN_HINTS = {
     "touch n go": ("touchngo.com.my",),
     "unifi": ("unifi.com.my", "tm.com.my"),
     "utem": ("utem.edu.my",),
+    "utm": ("utm.my",),
+    "ukm": ("ukm.my",),
+    "upm": ("upm.my",),
+    "usm": ("usm.my",),
+    "ums": ("ums.edu.my",),
+    "unisza": ("unisza.edu.my",),
+    "ump": ("ump.edu.my",),
+    "usim": ("usim.edu.my",),
+    "uums": ("uums.edu.my",),
+    "moe": ("moe.gov.my",),
+    "mohe": ("mohe.gov.my",),
+    "jpa": ("jpa.gov.my",),
+    "telekom": ("telekom.com.my", "tm.com.my"),
+    "maxis": ("maxis.com.my",),
+    "celcom": ("celcom.com.my",),
+    "digi": ("digi.com.my",),
+    "hotlink": ("hotlink.com.my",),
+    "tnb": ("tnb.com.my",),
+    "pos": ("pos.com.my",),
+    "myeg": ("myeg.com.my",),
+    "jpj": ("jpj.gov.my",),
+    "socso": ("socso.gov.my", "perkeso.gov.my"),
     "whatsapp": ("whatsapp.com",),
 }
 MANGGLISH_MAP = {
@@ -92,6 +220,9 @@ FEATURE_COLUMNS = [
     "has_money_phrase",
     "has_account_threat_phrase",
     "has_action_phrase",
+    "has_chinese",
+    "chinese_action_phrase",
+    "chinese_url",
 ]
 URL_RE = re.compile(r"(?i)\b(?:https?://|www\.|wa\.me/)[^\s]+")
 BARE_LINK_RE = re.compile(r"(?i)\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:/[^\s]*)?")
@@ -129,6 +260,11 @@ def normalize_message_text(text: str) -> str:
     tokens: list[str] = []
     for token in cleaned.split(" "):
         if URL_RE.fullmatch(token) or BARE_LINK_RE.fullmatch(token):
+            tokens.append(token)
+            continue
+
+        # Skip Chinese characters - they don't need manglish mapping
+        if re.search(r"[\u4e00-\u9fff]", token):
             tokens.append(token)
             continue
 
@@ -188,6 +324,27 @@ def _is_trusted_domain(domain: str) -> bool:
         _domain_matches_allowed(domain, allowed_domains)
         for allowed_domains in BRAND_DOMAIN_HINTS.values()
     )
+
+
+def _detect_chinese_features(text: str) -> dict[str, float]:
+    """Detect features specific to Chinese spam messages."""
+    has_chinese = bool(re.search(r"[\u4e00-\u9fff]", text))
+    
+    if not has_chinese:
+        return {
+            "has_chinese": 0.0,
+            "chinese_action_phrase": 0.0,
+            "chinese_url": 0.0,
+        }
+    
+    chinese_urls = CHINESE_URL_RE.findall(text)
+    has_chinese_action = any(phrase in text for phrase in CHINESE_ACTION_PHRASES)
+    
+    return {
+        "has_chinese": 1.0,
+        "chinese_action_phrase": float(has_chinese_action),
+        "chinese_url": float(bool(chinese_urls)),
+    }
 
 
 def extract_feature_signals(text: str) -> dict[str, float]:
@@ -276,9 +433,78 @@ def extract_feature_signals(text: str) -> dict[str, float]:
         "telegram group",
         "tempat adalah terhad",
         "peserta",
+        "kelas",
+        "lab",
+        "tutorial",
+        "assignment",
+        "midterm",
+        "final exam",
+        "presentation",
+        "fyp",
+        "thesis",
+        "report",
+        "meeting",
+        "discussion",
+        "group",
+        "session",
+        "workshop",
+        "seminar",
+        "ceramah",
+        "kuliah",
+        "makmal",
+        "dewan",
+        "bilik",
+        "kelas ganti",
+        "jadual",
+        "tukar",
+        "cancel",
+        "postpone",
+        "tolong",
+        "nak",
+        "jom",
+        "wei",
+        "bro",
+        "korang",
+        "kawan",
+        "kumpul",
+        "jumpa",
+        "share",
+        "pinjam",
+        "print",
+        "carpool",
+        "makan",
+        "minum",
+        "mamak",
+        "cafe",
+        "kantin",
+        "submit",
+        "upload",
+        "download",
+        "note",
+        "slide",
+        "pdf",
+        "google drive",
+        "google doc",
+        "google form",
+        "survey",
+        "kelab",
+        "persatuan",
+        "projek",
+        "latihan",
+        "kursus",
+        "sijil",
+        "konvo",
+        "majlis",
+        "lawatan",
+        "kem",
+        "gathering",
     )
 
     has_non_http_like_link_pattern = 1.0 if any("://" not in url for url in urls) else 0.0
+    
+    # Get Chinese features
+    chinese_features = _detect_chinese_features(text)
+    
     features = {
         "has_url": float(bool(urls)),
         "url_count": float(len(urls)),
@@ -299,6 +525,7 @@ def extract_feature_signals(text: str) -> dict[str, float]:
         ),
         "has_action_phrase": float(any(phrase in lowered for phrase in action_phrases)),
     }
+    features.update(chinese_features)
     return features
 
 
@@ -342,6 +569,8 @@ def _vectorize_messages(vectorizer: TfidfVectorizer, texts: Sequence[str]):
 
 def _calibrate_risk_score(base_score: float, feature_signals: dict[str, float]) -> float:
     adjustment = 0.0
+    
+    # INCREASE risk for suspicious patterns
     if feature_signals["has_shortlink"] and feature_signals["has_action_phrase"]:
         adjustment += 0.08
     if feature_signals["has_shortlink"] and feature_signals["has_account_threat_phrase"]:
@@ -354,7 +583,14 @@ def _calibrate_risk_score(base_score: float, feature_signals: dict[str, float]) 
         adjustment += 0.06
     if feature_signals["has_brand_domain_mismatch"] and feature_signals["has_account_threat_phrase"]:
         adjustment += 0.06
+    
+    # Chinese-specific risk increases
+    if feature_signals.get("has_chinese", 0) and feature_signals.get("chinese_action_phrase", 0):
+        adjustment += 0.05
+    if feature_signals.get("has_chinese", 0) and feature_signals.get("chinese_url", 0):
+        adjustment += 0.08
 
+    # DECREASE risk for legitimate patterns
     if feature_signals["has_trusted_domain"] and not feature_signals["has_brand_domain_mismatch"]:
         if feature_signals["has_brand_domain_match"]:
             adjustment -= 0.12
@@ -373,6 +609,20 @@ def _calibrate_risk_score(base_score: float, feature_signals: dict[str, float]) 
             adjustment -= 0.08
         else:
             adjustment -= 0.05
+    
+    # Strong reduction for legitimate university context
+    if feature_signals["has_event_context"] and not feature_signals["has_account_threat_phrase"]:
+        if not feature_signals["has_shortlink"]:
+            adjustment -= 0.15
+        else:
+            adjustment -= 0.08
+    
+    # Strong reduction for messages with only trusted domains
+    if feature_signals["has_trusted_domain"] and not feature_signals["has_brand_domain_mismatch"]:
+        if feature_signals["has_event_context"]:
+            adjustment -= 0.1
+        elif not feature_signals["has_account_threat_phrase"] and not feature_signals["has_money_phrase"]:
+            adjustment -= 0.08
 
     return max(0.01, min(0.99, base_score + adjustment))
 
