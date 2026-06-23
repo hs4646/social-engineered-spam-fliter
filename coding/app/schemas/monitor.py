@@ -26,3 +26,7 @@ class ManualReviewRequest(BaseModel):
     risk_score: float = Field(ge=0.0, le=1.0)
     decision: Literal["scam", "safe", "needs_review"]
     reviewer: constr(strip_whitespace=True, min_length=1)
+
+
+class SendWarningRequest(BaseModel):
+    risk_score: float = Field(ge=0.0, le=1.0, default=0.0)

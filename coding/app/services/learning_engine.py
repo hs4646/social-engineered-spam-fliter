@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
 
-DATASET_PATH = Path(__file__).resolve().parents[2] / "data" / "merged_dataset.csv"
+DATASET_PATH = Path(__file__).resolve().parents[2] / "data" / "final_dataset.csv"
 REQUIRED_COLUMNS = {"content", "label"}
 SHORTLINK_DOMAINS = {
     "bit.ly",
@@ -329,17 +329,17 @@ def _is_trusted_domain(domain: str) -> bool:
 def _detect_chinese_features(text: str) -> dict[str, float]:
     """Detect features specific to Chinese spam messages."""
     has_chinese = bool(re.search(r"[\u4e00-\u9fff]", text))
-    
+
     if not has_chinese:
         return {
             "has_chinese": 0.0,
             "chinese_action_phrase": 0.0,
             "chinese_url": 0.0,
         }
-    
+
     chinese_urls = CHINESE_URL_RE.findall(text)
     has_chinese_action = any(phrase in text for phrase in CHINESE_ACTION_PHRASES)
-    
+
     return {
         "has_chinese": 1.0,
         "chinese_action_phrase": float(has_chinese_action),
@@ -501,10 +501,10 @@ def extract_feature_signals(text: str) -> dict[str, float]:
     )
 
     has_non_http_like_link_pattern = 1.0 if any("://" not in url for url in urls) else 0.0
-    
+
     # Get Chinese features
     chinese_features = _detect_chinese_features(text)
-    
+
     features = {
         "has_url": float(bool(urls)),
         "url_count": float(len(urls)),
@@ -557,7 +557,7 @@ def prepare_training_frame(dataset_path: Path | None = None) -> pd.DataFrame:
     return pd.concat([df, feature_frame], axis=1)
 
 
-def _build_feature_matrix(texts: Sequence[str], feature_frame: pd.DataFrame) -> csr_matrix:
+def _build_feature_matrix(feature_frame: pd.DataFrame) -> csr_matrix:
     feature_rows = feature_frame[FEATURE_COLUMNS].astype(float).to_numpy()
     return csr_matrix(feature_rows)
 
@@ -569,7 +569,7 @@ def _vectorize_messages(vectorizer: TfidfVectorizer, texts: Sequence[str]):
 
 def _calibrate_risk_score(base_score: float, feature_signals: dict[str, float]) -> float:
     adjustment = 0.0
-    
+
     # INCREASE risk for suspicious patterns
     if feature_signals["has_shortlink"] and feature_signals["has_action_phrase"]:
         adjustment += 0.08
@@ -583,7 +583,7 @@ def _calibrate_risk_score(base_score: float, feature_signals: dict[str, float]) 
         adjustment += 0.06
     if feature_signals["has_brand_domain_mismatch"] and feature_signals["has_account_threat_phrase"]:
         adjustment += 0.06
-    
+
     # Chinese-specific risk increases
     if feature_signals.get("has_chinese", 0) and feature_signals.get("chinese_action_phrase", 0):
         adjustment += 0.05
@@ -609,14 +609,14 @@ def _calibrate_risk_score(base_score: float, feature_signals: dict[str, float]) 
             adjustment -= 0.08
         else:
             adjustment -= 0.05
-    
+
     # Strong reduction for legitimate university context
     if feature_signals["has_event_context"] and not feature_signals["has_account_threat_phrase"]:
         if not feature_signals["has_shortlink"]:
             adjustment -= 0.15
         else:
             adjustment -= 0.08
-    
+
     # Strong reduction for messages with only trusted domains
     if feature_signals["has_trusted_domain"] and not feature_signals["has_brand_domain_mismatch"]:
         if feature_signals["has_event_context"]:
@@ -665,8 +665,8 @@ def setup_security_models(dataset_path: Path | None = None) -> dict[str, object]
     eval_vectorizer = _build_vectorizer()
     x_train_text = eval_vectorizer.fit_transform(x_train["vector_text"])
     x_test_text = eval_vectorizer.transform(x_test["vector_text"])
-    x_train_dense = _build_feature_matrix(x_train["content"], x_train)
-    x_test_dense = _build_feature_matrix(x_test["content"], x_test)
+    x_train_dense = _build_feature_matrix(x_train)
+    x_test_dense = _build_feature_matrix(x_test)
     x_train_features = hstack([x_train_text, x_train_dense], format="csr")
     x_test_features = hstack([x_test_text, x_test_dense], format="csr")
 
@@ -680,7 +680,7 @@ def setup_security_models(dataset_path: Path | None = None) -> dict[str, object]
 
     final_vectorizer = _build_vectorizer()
     full_text_features = final_vectorizer.fit_transform(training_frame["vector_text"])
-    full_dense_features = _build_feature_matrix(training_frame["content"], training_frame)
+    full_dense_features = _build_feature_matrix(training_frame)
     full_features = hstack([full_text_features, full_dense_features], format="csr")
 
     rf_model = _build_rf_model()

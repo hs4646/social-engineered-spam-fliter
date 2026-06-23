@@ -1,5 +1,4 @@
 import time
-from collections import deque
 from pathlib import Path
 from typing import Callable
 
@@ -19,8 +18,38 @@ StatusCallback = Callable[[bool], None]
 SESSION_DIR = Path(__file__).resolve().parents[2] / ".whatsapp_session"
 AUTO_WARNING_THRESHOLD = 0.90
 
+_active_driver: webdriver.Chrome | None = None
+
+
+def get_active_driver() -> webdriver.Chrome | None:
+    return _active_driver
+
+
+def send_warning_message(risk_score: float) -> tuple[bool, str]:
+    driver = _active_driver
+    if driver is None:
+        return False, "No active monitoring session."
+    try:
+        _send_warning(driver, risk_score, lambda msg: None)
+        return True, "Warning sent."
+    except Exception as exc:
+        return False, str(exc)
+
+
+def _is_chat_open(driver: webdriver.Chrome) -> bool:
+    try:
+        input_box = driver.find_elements(
+            By.CSS_SELECTOR, "div[contenteditable='true'][data-tab='10']"
+        )
+        return len(input_box) > 0
+    except Exception:
+        return False
+
 
 def _get_recent_message_texts(driver: webdriver.Chrome) -> list[str]:
+    if not _is_chat_open(driver):
+        return []
+
     texts: list[str] = []
     elements = driver.find_elements(By.CSS_SELECTOR, "div[role='row'] span[dir='ltr']")
 
@@ -78,10 +107,12 @@ def whatsapp_monitor_worker(
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
 
+    global _active_driver
     driver = None
     try:
         try:
             driver = _create_chrome_driver(options, on_message)
+            _active_driver = driver
         except Exception as startup_err:
             error_text = str(startup_err)
             if "user data directory is already in use" in error_text.lower():
@@ -122,7 +153,8 @@ def whatsapp_monitor_worker(
             }
         )
 
-        seen_messages = deque(maxlen=20)
+        seen_messages: list[str] = []
+        SEEN_LIMIT = 200
 
         while should_continue():
             try:
@@ -136,6 +168,8 @@ def whatsapp_monitor_worker(
                         continue
 
                     seen_messages.append(latest_message)
+                    if len(seen_messages) > SEEN_LIMIT:
+                        seen_messages = seen_messages[-SEEN_LIMIT:]
 
                     average_score = float(score_text(latest_message, model_bundle)["risk_score"])
 
@@ -167,6 +201,7 @@ def whatsapp_monitor_worker(
             }
         )
     finally:
+        _active_driver = None
         if driver:
             try:
                 driver.quit()

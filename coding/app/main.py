@@ -12,9 +12,9 @@ from fastapi.templating import Jinja2Templates
 
 from app.core.config import get_settings
 from app.repositories.risk_events import RiskEventRepository
-from app.schemas.monitor import ManualAnalyzeRequest, ManualReviewRequest
+from app.schemas.monitor import ManualAnalyzeRequest, ManualReviewRequest, SendWarningRequest
 from app.services.learning_engine import score_text, setup_security_models
-from app.services.radar import whatsapp_monitor_worker
+from app.services.radar import send_warning_message, whatsapp_monitor_worker
 
 
 class ConnectionManager:
@@ -34,13 +34,20 @@ class ConnectionManager:
 
     async def broadcast(self, payload: dict[str, Any]) -> None:
         async with self._lock:
-            # Iterate over a copy to safely remove from the original list
-            for connection in self.active_connections[:]:
-                try:
-                    await connection.send_json(payload)
-                except Exception:
+            snapshot = self.active_connections[:]
+
+        stale: list[WebSocket] = []
+        for connection in snapshot:
+            try:
+                await connection.send_json(payload)
+            except Exception:
+                stale.append(connection)
+
+        if stale:
+            async with self._lock:
+                for conn in stale:
                     try:
-                        self.active_connections.remove(connection)
+                        self.active_connections.remove(conn)
                     except ValueError:
                         pass
 
@@ -174,6 +181,27 @@ def create_app() -> FastAPI:
         }
         publish_message(review_event)
         return JSONResponse({"ok": True, "event": review_event})
+
+    @app.post("/api/messages/warn")
+    async def send_warning(payload: SendWarningRequest) -> JSONResponse:
+        success, detail = send_warning_message(payload.risk_score)
+        if success:
+            publish_message(
+                {
+                    "text": "System: Automated anti-scam warning broadcasted in the WhatsApp group.",
+                    "risk": 0.0,
+                    "type": "system",
+                }
+            )
+        else:
+            publish_message(
+                {
+                    "text": f"System: Failed to send warning: {detail}",
+                    "risk": 0.0,
+                    "type": "system",
+                }
+            )
+        return JSONResponse({"ok": success, "message": detail})
 
     @app.post("/api/monitor/start")
     async def start_monitor() -> JSONResponse:
