@@ -280,20 +280,24 @@
         }
 
         .feed-entry.risk-critical {
-            border-color: rgba(255, 95, 122, 0.42);
-            box-shadow: inset 0 0 0 1px rgba(255, 95, 122, 0.12);
+            border-color: rgba(255, 95, 122, 0.65);
+            background: linear-gradient(135deg, rgba(255, 95, 122, 0.10), rgba(5, 16, 28, 0.82));
+            box-shadow: 0 0 24px rgba(255, 95, 122, 0.30), inset 0 0 0 1px rgba(255, 95, 122, 0.18);
         }
 
         .feed-entry.risk-warning {
-            border-color: rgba(243, 201, 107, 0.34);
+            border-color: rgba(243, 201, 107, 0.55);
+            background: linear-gradient(135deg, rgba(243, 201, 107, 0.08), rgba(5, 16, 28, 0.82));
+            box-shadow: 0 0 18px rgba(243, 201, 107, 0.18);
         }
 
         .feed-entry.risk-safe {
-            border-color: rgba(110, 247, 164, 0.22);
+            border-color: rgba(110, 247, 164, 0.35);
+            background: linear-gradient(135deg, rgba(110, 247, 164, 0.05), rgba(5, 16, 28, 0.82));
         }
 
         .feed-entry.risk-system {
-            border-color: rgba(108, 200, 255, 0.28);
+            border-color: rgba(108, 200, 255, 0.35);
         }
 
         .entry-header {
@@ -330,10 +334,12 @@
 
         .risk-critical .entry-score {
             color: var(--danger);
+            font-size: 1.3rem;
         }
 
         .risk-warning .entry-score {
             color: var(--warning);
+            font-size: 1.2rem;
         }
 
         .risk-safe .entry-score {
@@ -342,6 +348,26 @@
 
         .risk-system .entry-score {
             color: var(--system);
+        }
+
+        .risk-critical .entry-title {
+            color: var(--danger);
+        }
+
+        .risk-warning .entry-title {
+            color: var(--warning);
+        }
+
+        .risk-safe .entry-title {
+            color: var(--safe);
+        }
+
+        .risk-critical .entry-kicker {
+            color: var(--danger);
+        }
+
+        .risk-warning .entry-kicker {
+            color: var(--warning);
         }
 
         .entry-text {
@@ -423,6 +449,48 @@
         .review-btn:disabled {
             opacity: 0.45;
             cursor: not-allowed;
+        }
+
+        .warn-btn {
+            border: 1px solid rgba(255, 95, 122, 0.40);
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: var(--danger);
+            background: rgba(44, 9, 17, 0.55);
+            font: inherit;
+            cursor: pointer;
+            transition: background 180ms ease, border-color 180ms ease;
+        }
+
+        .warn-btn:hover {
+            background: rgba(255, 95, 122, 0.18);
+            border-color: rgba(255, 95, 122, 0.60);
+        }
+
+        .warn-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(89, 243, 193, 0.18);
+            background: rgba(4, 13, 22, 0.72);
+            color: var(--text);
+            font: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 180ms ease;
+        }
+
+        .search-input::placeholder {
+            color: var(--muted);
+        }
+
+        .search-input:focus {
+            border-color: rgba(89, 243, 193, 0.45);
         }
 
         @media (max-width: 900px) {
@@ -518,6 +586,7 @@
                     <h2>Live Threat Feed</h2>
                     <p>Incoming interceptions, model decisions, and automated defense events appear here as they happen.</p>
                 </div>
+                <input id="searchInput" class="search-input" type="text" placeholder="Search messages..." />
             </div>
             <div id="feedList" class="feed-list"></div>
         </section>

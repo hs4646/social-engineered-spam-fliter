@@ -39,5 +39,5 @@ Then navigate to `http://127.0.0.1:8000` in your browser.
 - `coding/app/`: FastAPI application (routes, models, services).
 - `coding/radar.py`: Selenium worker for WhatsApp monitoring.
 - `coding/learning_engine.py`: ML pipeline and model training logic.
-- `coding/whatsapp_dataset.csv`: Dataset used for training.
+- `coding/data/final_dataset.csv`: Unified dataset used for training (10,000 labeled messages)
 - `coding/static/` & `coding/templates/`: UI assets.

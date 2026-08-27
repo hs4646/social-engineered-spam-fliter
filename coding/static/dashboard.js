@@ -34,6 +34,14 @@ export function canManuallyAnalyze(message, reviewedTexts) {
   return true;
 }
 
+export function canSendWarning(message) {
+  if (message.type !== 'chat') {
+    return false;
+  }
+  const risk = Number(message.risk || 0);
+  return risk > 0.7 && risk < 0.9;
+}
+
 export function shouldRunManualAnalyze(message, { analyzePending, reviewedTexts }) {
   return !analyzePending && canManuallyAnalyze(message, reviewedTexts);
 }
@@ -144,6 +152,7 @@ function initDashboard() {
   const eventCount = document.getElementById('eventCount');
   const criticalCount = document.getElementById('criticalCount');
   const safeCount = document.getElementById('safeCount');
+  const searchInput = document.getElementById('searchInput');
 
   if (!feedList || !statusBadge || !startBtn || !stopBtn || !refreshBtn) {
     return;
@@ -154,8 +163,10 @@ function initDashboard() {
     requestPending: false,
     analyzePending: false,
     reviewPending: false,
+    warnPending: false,
     messages: [],
     reviewedTexts: loadReviewedTexts(),
+    searchQuery: '',
   };
 
   function syncControls() {
@@ -165,6 +176,23 @@ function initDashboard() {
     startBtn.disabled = controlState.startDisabled;
     stopBtn.disabled = controlState.stopDisabled;
     refreshBtn.disabled = controlState.refreshDisabled;
+  }
+
+  function filterFeed() {
+    const query = state.searchQuery.toLowerCase().trim();
+    const entries = feedList.querySelectorAll('.feed-entry');
+    entries.forEach((entry) => {
+      if (!query) {
+        entry.style.display = '';
+        return;
+      }
+      const textEl = entry.querySelector('.entry-text');
+      const titleEl = entry.querySelector('.entry-title');
+      const text = (textEl?.textContent || '').toLowerCase();
+      const title = (titleEl?.textContent || '').toLowerCase();
+      const match = text.includes(query) || title.includes(query);
+      entry.style.display = match ? '' : 'none';
+    });
   }
 
   function updateStats() {
@@ -188,8 +216,10 @@ function initDashboard() {
     const wrapper = document.createElement('article');
     wrapper.className = `feed-entry risk-${meta.level}`;
     const showAnalyzeButton = canManuallyAnalyze(message, state.reviewedTexts);
+    const showWarnButton = canSendWarning(message);
     const showReviewControls = canReviewManualAnalysis(message);
     const title = message.type === 'review-decision' ? reviewDecisionLabel(message.decision) : meta.label;
+    const showActions = showAnalyzeButton || showWarnButton;
     wrapper.innerHTML = `
       <div class="entry-header">
         <div>
@@ -200,7 +230,7 @@ function initDashboard() {
       </div>
       <p class="entry-text">${escapeHtml(message.text || '')}</p>
       ${message.type === 'review-decision' ? `<p class="review-note">Reviewer: ${escapeHtml(message.reviewer || '')}</p>` : ''}
-      ${showAnalyzeButton ? '<div class="entry-actions"><button type="button" class="analyze-btn">Analyze Message</button></div>' : ''}
+      ${showActions ? `<div class="entry-actions">${showAnalyzeButton ? '<button type="button" class="analyze-btn">Analyze Message</button>' : ''}${showWarnButton ? '<button type="button" class="warn-btn">Send Warning</button>' : ''}</div>` : ''}
       ${showReviewControls ? `
         <div class="review-panel">
           <label class="review-label">
@@ -224,6 +254,15 @@ function initDashboard() {
       }
     }
 
+    if (showWarnButton) {
+      const warnBtn = wrapper.querySelector('.warn-btn');
+      if (warnBtn) {
+        warnBtn.dataset.messageText = message.text || '';
+        warnBtn.dataset.risk = String(Number(message.risk || 0));
+        warnBtn.disabled = state.warnPending;
+      }
+    }
+
     if (showReviewControls) {
       wrapper.querySelectorAll('.review-btn').forEach((button) => {
         button.disabled = state.reviewPending;
@@ -243,6 +282,7 @@ function initDashboard() {
       if (feedList.children.length > 50) {
         feedList.removeChild(feedList.lastElementChild);
       }
+      filterFeed();
     } else {
       feedList.appendChild(wrapper);
     }
@@ -255,6 +295,7 @@ function initDashboard() {
     feedList.innerHTML = '';
     state.messages.forEach((message) => renderMessage(message, false));
     updateStats();
+    filterFeed();
   }
 
   function syncAnalyzeButtons() {
@@ -269,6 +310,12 @@ function initDashboard() {
     });
     feedList.querySelectorAll('.reviewer-input').forEach((input) => {
       input.disabled = state.reviewPending;
+    });
+  }
+
+  function syncWarnButtons() {
+    feedList.querySelectorAll('.warn-btn').forEach((button) => {
+      button.disabled = state.warnPending;
     });
   }
 
@@ -318,6 +365,14 @@ function initDashboard() {
   });
 
   refreshBtn.addEventListener('click', refreshSnapshot);
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      state.searchQuery = searchInput.value;
+      filterFeed();
+    });
+  }
+
   feedList.addEventListener('click', async (event) => {
     const button = event.target.closest('.analyze-btn');
     if (button) {
@@ -334,8 +389,33 @@ function initDashboard() {
       } catch (error) {
         alert(error.message);
       } finally {
-        state.analyzePending = false;
-        syncAnalyzeButtons();
+      state.analyzePending = false;
+      syncAnalyzeButtons();
+      }
+      return;
+    }
+
+    const warnButton = event.target.closest('.warn-btn');
+    if (warnButton) {
+      if (state.warnPending) {
+        return;
+      }
+      state.warnPending = true;
+      const allWarnBtns = feedList.querySelectorAll('.warn-btn');
+      allWarnBtns.forEach((btn) => { btn.disabled = true; });
+
+      try {
+        await postJson('/api/messages/warn', {
+          text: warnButton.dataset.messageText || '',
+          risk_score: Number(warnButton.dataset.risk || 0),
+          decision: 'scam',
+          reviewer: 'Auto-Warning',
+        });
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        state.warnPending = false;
+        allWarnBtns.forEach((btn) => { btn.disabled = false; });
       }
       return;
     }
