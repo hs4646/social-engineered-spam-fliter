@@ -64,6 +64,21 @@ assert.equal(
   false,
 );
 
+// canManuallyAnalyze - must be available on ALL chat risk levels, including
+// high-risk messages above the 0.8 threshold (and above the 0.9 auto-send).
+assert.equal(
+  canManuallyAnalyze({ type: 'chat', text: 'High risk link', risk: 0.82 }, new Set()),
+  true,
+);
+assert.equal(
+  canManuallyAnalyze({ type: 'chat', text: 'Critical verify now', risk: 0.9 }, new Set()),
+  true,
+);
+assert.equal(
+  canManuallyAnalyze({ type: 'chat', text: 'Highest risk verify now', risk: 0.95 }, new Set()),
+  true,
+);
+
 // canManuallyAnalyze - reviewedTexts tests
 assert.equal(
   canManuallyAnalyze({ type: 'chat', text: 'test message' }, new Set(['test message'])),

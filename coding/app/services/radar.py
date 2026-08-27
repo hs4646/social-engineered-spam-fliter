@@ -1,4 +1,5 @@
 import time
+from collections import deque
 from pathlib import Path
 from typing import Callable
 
@@ -47,12 +48,19 @@ def _is_chat_open(driver: webdriver.Chrome) -> bool:
 
 
 def _get_recent_message_texts(driver: webdriver.Chrome) -> list[str]:
+    # Only scrape when a chat is actually open. Without this guard the broader
+    # fallback selectors match sidebar / chat-list previews and emit phantom
+    # messages even when the user has not opened any conversation.
+    if not _is_chat_open(driver):
+        return []
+
     texts: list[str] = []
-    elements = driver.find_elements(By.CSS_SELECTOR, "div[role='row'] span[dir='ltr']")
+    elements = driver.find_elements(
+        By.CSS_SELECTOR, "div[role='row'] span[dir='ltr']"
+    )
 
     if not elements:
         alt_selectors = [
-            "span[dir='ltr']",
             "div.message-in span[dir='ltr'], div.message-out span[dir='ltr']",
             "div[data-testid='msg-container'] span[dir='ltr']",
         ]
@@ -161,8 +169,7 @@ def whatsapp_monitor_worker(
             }
         )
 
-        seen_messages: list[str] = []
-        SEEN_LIMIT = 200
+        seen_messages: deque[str] = deque(maxlen=200)
 
         while should_continue():
             try:
@@ -176,8 +183,6 @@ def whatsapp_monitor_worker(
                         continue
 
                     seen_messages.append(latest_message)
-                    if len(seen_messages) > SEEN_LIMIT:
-                        seen_messages = seen_messages[-SEEN_LIMIT:]
 
                     average_score = float(score_text(latest_message, model_bundle)["risk_score"])
 

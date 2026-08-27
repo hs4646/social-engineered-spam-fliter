@@ -8,13 +8,17 @@ class ModelRegistry:
         self._dataset_path = Path(dataset_path)
         self._bundle: dict[str, object] | None = None
 
-    def train(self) -> None:
-        self._bundle = setup_security_models(dataset_path=self._dataset_path)
-
-    def score(self, text: str) -> dict[str, object]:
+    def _get_bundle(self) -> dict[str, object]:
         bundle = self._bundle
         if bundle is None:
+            # setup_security_models is lru_cached by dataset_path, so repeated
+            # train()/score() calls never retrain or build a second model.
             bundle = setup_security_models(dataset_path=self._dataset_path)
             self._bundle = bundle
+        return bundle
 
-        return score_text(text, bundle)
+    def train(self) -> None:
+        self._get_bundle()
+
+    def score(self, text: str) -> dict[str, object]:
+        return score_text(text, self._get_bundle())

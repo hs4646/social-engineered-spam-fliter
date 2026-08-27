@@ -12,9 +12,16 @@ from fastapi.templating import Jinja2Templates
 
 from app.core.config import get_settings
 from app.repositories.risk_events import RiskEventRepository
-from app.schemas.monitor import ManualAnalyzeRequest, ManualReviewRequest, SendWarningRequest
+from app.schemas.monitor import (
+    ManualAnalyzeRequest,
+    ManualReviewRequest,
+    SendWarningRequest,
+)
 from app.services.learning_engine import score_text, setup_security_models
-from app.services.radar import send_warning_message, whatsapp_monitor_worker
+from app.services.radar import (
+    send_warning_message,
+    whatsapp_monitor_worker,
+)
 
 
 class ConnectionManager:
@@ -91,6 +98,15 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.loop = asyncio.get_running_loop()
+        # Warm the model cache so the first analyze request / monitor message
+        # does not block on a multi-second RF+SVM training run.
+        def _warm_models() -> None:
+            try:
+                setup_security_models()
+            except Exception:
+                pass
+
+        threading.Thread(target=_warm_models, daemon=True).start()
         yield
         # Ensure monitoring stops on app shutdown
         monitor_state.set_running(False)

@@ -252,8 +252,7 @@ def _normalize_spacing(text: str) -> str:
     return WHITESPACE_RE.sub(" ", text.strip().lower())
 
 
-def normalize_message_text(text: str) -> str:
-    cleaned = _normalize_spacing(text)
+def _expand_manglish_on_cleaned(cleaned: str) -> str:
     if not cleaned:
         return ""
 
@@ -280,12 +279,19 @@ def normalize_message_text(text: str) -> str:
     return " ".join(tokens)
 
 
-def _compose_vector_text(text: str) -> str:
-    cleaned = _normalize_spacing(text)
-    normalized = normalize_message_text(text)
+def normalize_message_text(text: str) -> str:
+    return _expand_manglish_on_cleaned(_normalize_spacing(text))
+
+
+def _compose_vector_text_from_cleaned(cleaned: str) -> str:
+    normalized = _expand_manglish_on_cleaned(cleaned)
     if normalized and normalized != cleaned:
         return f"{cleaned} {normalized}"
     return normalized or cleaned
+
+
+def _compose_vector_text(text: str) -> str:
+    return _compose_vector_text_from_cleaned(_normalize_spacing(text))
 
 
 def _extract_urls(text: str) -> list[str]:
@@ -347,8 +353,8 @@ def _detect_chinese_features(text: str) -> dict[str, float]:
     }
 
 
-def extract_feature_signals(text: str) -> dict[str, float]:
-    lowered = _normalize_spacing(text)
+def extract_feature_signals(text: str, pre_lowered: str | None = None) -> dict[str, float]:
+    lowered = pre_lowered if pre_lowered is not None else _normalize_spacing(text)
     urls = _extract_urls(lowered)
     domains = [_normalize_domain(url) for url in urls]
 
@@ -562,8 +568,15 @@ def _build_feature_matrix(feature_frame: pd.DataFrame) -> csr_matrix:
     return csr_matrix(feature_rows)
 
 
-def _vectorize_messages(vectorizer: TfidfVectorizer, texts: Sequence[str]):
-    vector_texts = [_compose_vector_text(text) for text in texts]
+def _vectorize_messages(
+    vectorizer: TfidfVectorizer,
+    texts: Sequence[str],
+    pre_cleaned: str | None = None,
+):
+    if pre_cleaned is not None and len(texts) == 1:
+        vector_texts = [_compose_vector_text_from_cleaned(pre_cleaned)]
+    else:
+        vector_texts = [_compose_vector_text(text) for text in texts]
     return vectorizer.transform(vector_texts)
 
 
@@ -628,8 +641,9 @@ def _calibrate_risk_score(base_score: float, feature_signals: dict[str, float]) 
 
 
 def score_text(text: str, bundle: dict[str, object]) -> dict[str, object]:
-    feature_signals = extract_feature_signals(text)
-    vector = _vectorize_messages(bundle["vectorizer"], [text])
+    cleaned = _normalize_spacing(text)
+    feature_signals = extract_feature_signals(text, pre_lowered=cleaned)
+    vector = _vectorize_messages(bundle["vectorizer"], [text], pre_cleaned=cleaned)
     dense = csr_matrix([[feature_signals[name] for name in FEATURE_COLUMNS]])
     combined = hstack([vector, dense], format="csr")
     rf_score = float(bundle["rf_model"].predict_proba(combined)[0][1])
