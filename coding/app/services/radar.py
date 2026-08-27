@@ -47,11 +47,19 @@ def _is_chat_open(driver: webdriver.Chrome) -> bool:
 
 
 def _get_recent_message_texts(driver: webdriver.Chrome) -> list[str]:
-    if not _is_chat_open(driver):
-        return []
-
     texts: list[str] = []
     elements = driver.find_elements(By.CSS_SELECTOR, "div[role='row'] span[dir='ltr']")
+
+    if not elements:
+        alt_selectors = [
+            "span[dir='ltr']",
+            "div.message-in span[dir='ltr'], div.message-out span[dir='ltr']",
+            "div[data-testid='msg-container'] span[dir='ltr']",
+        ]
+        for sel in alt_selectors:
+            elements = driver.find_elements(By.CSS_SELECTOR, sel)
+            if elements:
+                break
 
     for element in elements[-5:]:
         try:
